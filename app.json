@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "funkytown-mobile",
+    "slug": "funkytown-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/koi-the-splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2b302f"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/koi-the.webp",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
