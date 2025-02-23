@@ -10,229 +10,151 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
-  ScrollView,
 } from "react-native";
+import { FontAwesome, Feather } from "@expo/vector-icons";
 
 const RegisterScreen = ({ navigation }) => {
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [address, setAddress] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const roleId = "66eeb2c875b031f4c4559489"; // Set the default roleId
 
   const handleRegister = async () => {
-    if (
-      !fullName ||
-      !username ||
-      !password ||
-      !confirmPassword ||
-      !phoneNumber ||
-      !address
-    ) {
-      Alert.alert("Đăng ký thất bại", "Vui lòng điền đầy đủ thông tin");
+    if (!fullName || !username || !password || !confirmPassword) {
+      Alert.alert("Registration Error", "Please fill in all fields.");
       return;
     }
-
+  
     if (password !== confirmPassword) {
-      Alert.alert(
-        "Đăng ký thất bại",
-        "Mật khẩu và xác nhận mật khẩu không khớp"
-      );
+      Alert.alert("Registration Error", "Passwords do not match.");
       return;
     }
-
+  
     setIsLoading(true);
-
-    const requestData = {
-      fullName,
-      username,
-      password,
-      phoneNumber,
-      address,
-      roleId,
-    };
-
-    // Call the register API here using requestData
-    // For example:
-    // await register(requestData);
-
+  
     try {
-      const response = await register(requestData); // Call the register function
+      // Store user data in AsyncStorage
+      await AsyncStorage.setItem("userEmail", username);
+      await AsyncStorage.setItem("userPassword", password);
+  
       setIsLoading(false);
-      console.log(response);
-
-      Alert.alert(
-        "Đăng ký thành công!",
-        `Chào mừng ${username} đến với cửa hàng cá koi!`
-      );
-      navigation.navigate("Login");
+      Alert.alert("Registration Successful", `Welcome, ${username}!`);
+      navigation.replace("Login");
     } catch (error) {
       setIsLoading(false);
-      Alert.alert("Đăng ký thất bại", error.message);
+      Alert.alert("Registration Failed", "An error occurred. Try again.");
     }
   };
+  
 
   return (
-    <SafeAreaView style={styles.con}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.container}>
-            <Text style={styles.title}>Đăng Ký</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Họ và tên"
-              value={fullName}
-              onChangeText={setFullName}
-              placeholderTextColor="#999"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Tên đăng nhập"
-              value={username}
-              onChangeText={setUsername}
-              placeholderTextColor="#999"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Mật khẩu"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              placeholderTextColor="#999"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Xác nhận mật khẩu"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              placeholderTextColor="#999"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Số điện thoại"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              placeholderTextColor="#999"
-              keyboardType="phone-pad"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Địa chỉ"
-              value={address}
-              onChangeText={setAddress}
-              placeholderTextColor="#999"
-            />
-            <TouchableOpacity
-              style={styles.registerButton}
-              onPress={handleRegister}
-              disabled={isLoading}
-            >
-              <Text style={styles.registerButtonText}>Đăng Ký</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.loginButton}
-              onPress={() => navigation.navigate("Login")}
-            >
-              <Text style={styles.loginButtonText}>
-                Đã có tài khoản? Đăng Nhập
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {isLoading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#ff6347" />
-            </View>
-          )}
-        </ScrollView>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
+        <Text style={styles.logo}>FUNKYTOWN</Text>
+        <Text style={styles.registerText}>REGISTER TO CONTINUE</Text>
+        <View style={styles.inputContainer}>
+        <TextInput style={styles.input} placeholder="Full Name" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
+        </View>
+
+        <View style={styles.inputContainer}>
+        <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} autoCapitalize="none" />
+        </View>
+
+        <View style={styles.passwordContainer}>
+          <TextInput style={styles.passwordInput} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="black" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.passwordContainer}>
+          <TextInput style={styles.passwordInput} placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showPassword} />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="black" />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
+          <Text style={styles.registerButtonText}>Register</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.alreadyText}>Already have an account? <Text style={styles.loginNow} onPress={() => navigation.navigate("Login")}>Login now</Text></Text>
+
+        {isLoading && <ActivityIndicator size="large" color="#000" />}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
+export default RegisterScreen;
+
 const styles = StyleSheet.create({
-  con: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
   container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
     padding: 20,
-    marginHorizontal: 20,
-    marginTop: 40,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
   },
-  title: {
-    fontSize: 26,
+  logo: {
+    fontSize: 32,
     fontWeight: "bold",
-    color: "#ba2d32",
-    textAlign: "center",
-    marginBottom: 30,
+    color: "#412C2C",
+    marginBottom: 20,
+  },
+  registerText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#412C2C",
+    marginBottom: 20,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    padding: 10,
+    marginBottom: 20,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 14,
-    marginBottom: 16,
-    borderRadius: 8,
-    backgroundColor: "#f9f9f9",
+    flex: 1,
+    fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    padding: 10,
+    marginBottom: 20,
+  },
+  passwordInput: {
+    flex: 1,
     fontSize: 16,
   },
   registerButton: {
-    backgroundColor: "#ba2d32",
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginBottom: 16,
+    width: "100%",
+    backgroundColor: "#412C2C",
+    padding: 15,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 2,
+    borderRadius: 5,
+    marginBottom: 20,
   },
   registerButtonText: {
     color: "#fff",
-    fontWeight: "600",
     fontSize: 18,
+    fontWeight: "bold",
   },
-  loginButton: {
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ba2d32",
+  alreadyText: {
+    color: "#777",
+    marginTop: 20,
   },
-  loginButtonText: {
-    color: "#ba2d32",
-    fontWeight: "600",
-    textAlign: "center",
-    fontSize: 16,
-  },
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 10,
+  loginNow: {
+    color: "#412C2C",
+    fontWeight: "bold",
   },
 });
-
-export default RegisterScreen;

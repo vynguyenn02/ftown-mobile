@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/koi-the-splash.png",
+      "image": "./assets/funkytown-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#2b302f"
     },

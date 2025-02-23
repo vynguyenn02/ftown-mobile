@@ -7,118 +7,90 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  ImageBackground,
-  TouchableWithoutFeedback,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { FontAwesome, Feather } from "@expo/vector-icons";
 import { API_URL } from "@env";
-import { jwtDecode } from "jwt-decode";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-console.log(API_URL);
 
 const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-    if (!username || !password) {
-      Alert.alert(
-        "Lỗi đăng nhập",
-        "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu"
-      );
-      return;
-    }
-
     setLoading(true);
     try {
-      const data = await login(username, password);
-
-      // Kiểm tra xem có thành công không
-      if (data && data.token) {
-        const decodedToken = jwtDecode(data.token); // Decode the token
-        console.log("Decoded token:", decodedToken);
-        console.log(decodedToken.userId);
-
-        // Save the decoded token data in AsyncStorage
-        await AsyncStorage.setItem("userInfo", JSON.stringify(decodedToken));
-        await AsyncStorage.setItem("userToken", data.token);
-        await AsyncStorage.setItem("userId", decodedToken.userId);
-
-        await AsyncStorage.setItem("expToken", decodedToken.exp.toString());
-
-        // console.log("Login successful:", data);
-        navigation.replace("AppDrawer"); // Navigate after successful login
-      } else {
-        Alert.alert("Đăng nhập thất bại", data.message);
-        setUsername("");
-        setPassword("");
-      }
+      // Simulate successful login by setting a dummy token
+      await AsyncStorage.setItem("userToken", "dummyToken");
+  
+      // Navigate to HomeScreen
+      navigation.replace("Home");
     } catch (error) {
-      // console.error("Error logging in:", error);
-      Alert.alert(
-        "Đăng nhập thất bại",
-        error.message || "Có lỗi xảy ra, vui lòng thử lại sau."
-      );
-      console.log(error);
+      Alert.alert("Login Failed", "Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
   };
-
+  
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
+      style={styles.container}
     >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ImageBackground
-          source={require("../assets/images/background-login.webp")}
-          style={styles.background}
-        >
-          <View style={styles.overlay}>
-            <Text style={styles.titleApp}>Koi-thé</Text>
-            <View style={styles.container}>
-              <Text style={styles.title}>Đăng Nhập</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Tên đăng nhập"
-                value={username}
-                onChangeText={setUsername}
-                placeholderTextColor="#999"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Mật khẩu"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholderTextColor="#999"
-              />
-              <TouchableOpacity
-                style={styles.loginButton}
-                onPress={handleLogin}
-              >
-                <Text style={styles.loginButtonText}>Đăng Nhập</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.registerButton}
-                onPress={() => navigation.navigate("Register")}
-              >
-                <Text style={styles.registerButtonText}>Đăng Ký</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+      <Text style={styles.logo}>FUNKYTOWN</Text>
+      <Text style={styles.loginText}>LOGIN TO CONTINUE</Text>
 
-          {loading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#ff6347" />
-            </View>
-          )}
-        </ImageBackground>
-      </TouchableWithoutFeedback>
+      <TextInput
+        style={styles.input}
+        placeholder="e.g john@doe.com"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      
+      <View style={styles.passwordContainer}>
+        <TextInput
+          style={styles.passwordInput}
+          placeholder="**********"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Feather
+            name={showPassword ? "eye" : "eye-off"}
+            size={20}
+            color="black"
+          />
+        </TouchableOpacity>
+      </View>
+      
+      <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+        <Text style={styles.loginButtonText}>Login</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+        <Text style={styles.forgotPassword}>forgot your password?</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.orText}>or use other login method</Text>
+
+      <TouchableOpacity style={styles.socialButton}>
+        <FontAwesome name="google" size={20} color="black" />
+        <Text style={styles.socialButtonText}>Login with Google</Text>
+      </TouchableOpacity>
+      
+    
+      
+      <Text style={styles.registerText}>
+        haven’t an account yet? <Text style={styles.registerNow} onPress={() => navigation.navigate("Register")}>register now</Text>
+      </Text>
+
+      {loading && <ActivityIndicator size="large" color="#000" />}
     </KeyboardAvoidingView>
   );
 };
@@ -126,85 +98,90 @@ const LoginScreen = ({ navigation }) => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    resizeMode: "cover",
-    justifyContent: "center",
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-  },
   container: {
+    flex: 1,
     justifyContent: "center",
-    padding: 16,
-    margin: 20,
-    borderRadius: 20,
-    backgroundColor: "#ffffffcc",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 8,
-    elevation: 6,
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 20,
   },
-  titleApp: {
-    fontSize: 48,
+  logo: {
+    fontSize: 32,
     fontWeight: "bold",
-    textAlign: "center",
-    color: "#ba2d32",
-    marginBottom: 50,
-    fontFamily: "sans-serif-condensed",
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "600",
+    color: "#412C2C",
     marginBottom: 20,
-    textAlign: "center",
-    color: "#ba2d32",
+  },
+  loginText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#412C2C",
+    marginBottom: 20,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    padding: 12,
-    marginBottom: 16,
-    borderRadius: 8,
-    backgroundColor: "#f9f9f9",
+    width: "100%",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    padding: 10,
+    marginBottom: 20,
+    fontSize: 16,
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    padding: 10,
+    marginBottom: 20,
+  },
+  passwordInput: {
+    flex: 1,
     fontSize: 16,
   },
   loginButton: {
-    backgroundColor: "#ba2d32",
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 10,
+    width: "100%",
+    backgroundColor: "#412C2C",
+    padding: 15,
+    alignItems: "center",
+    borderRadius: 5,
+    marginBottom: 20,
   },
   loginButtonText: {
     color: "#fff",
-    fontWeight: "600",
-    textAlign: "center",
     fontSize: 18,
+    fontWeight: "bold",
   },
-  registerButton: {
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ba2d32",
+  forgotPassword: {
+    color: "#777",
+    fontStyle: "italic",
+    marginBottom: 20,
   },
-  registerButtonText: {
-    color: "#ba2d32",
-    fontWeight: "600",
-    textAlign: "center",
-    fontSize: 16,
+  orText: {
+    color: "#777",
+    marginBottom: 10,
   },
-  loadingOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
+  socialButton: {
+    flexDirection: "row",
     alignItems: "center",
-    zIndex: 10,
+    justifyContent: "center",
+    width: "100%",
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#412C2C",
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  socialButtonText: {
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  registerText: {
+    color: "#777",
+    marginTop: 20,
+  },
+  registerNow: {
+    color: "#412C2C",
+    fontWeight: "bold",
   },
 });

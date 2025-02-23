@@ -1,10 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { StatusBar, ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
+import HomeScreen from "../screens/HomeScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -15,9 +15,8 @@ const AppStack = () => {
     const checkToken = async () => {
       try {
         const token = await AsyncStorage.getItem("userToken");
-        setInitialRoute(token ? "AppDrawer" : "Login");
+        setInitialRoute(token ? "Home" : "Login");
       } catch (error) {
-        console.error("Failed to retrieve token:", error);
         setInitialRoute("Login");
       }
     };
@@ -34,25 +33,11 @@ const AppStack = () => {
   }
 
   return (
-    <>
-      <StatusBar animated={true} />
-      <Stack.Navigator
-        initialRouteName={initialRoute}
-        screenOptions={{ gestureEnabled: false }}
-      >
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Register"
-          component={RegisterScreen}
-          options={{ headerShown: false }}
-        />
-        
-      </Stack.Navigator>
-    </>
+    <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ gestureEnabled: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+    </Stack.Navigator>
   );
 };
 
