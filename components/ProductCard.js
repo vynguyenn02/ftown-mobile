@@ -1,18 +1,19 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 const ProductCard = ({ item }) => {
+  const navigation = useNavigation(); // Lấy navigation từ context
+
   return (
-    <View style={styles.productCard}>
+    <TouchableOpacity style={styles.productCard} onPress={() => navigation.navigate("ProductDetail", { product: item })}>
       <Image source={item.image} style={styles.productImage} />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
         <View style={styles.ratingContainer}>
           <FontAwesome name="star" size={16} color="gold" />
-          <Text style={styles.ratingText}>
-            {item.rating} ({item.reviews} reviews)
-          </Text>
+          <Text style={styles.ratingText}>{item.rating} ({item.reviews} reviews)</Text>
         </View>
         <Text style={styles.productPrice}>{item.price}</Text>
         <View style={styles.productFooter}>
@@ -24,7 +25,7 @@ const ProductCard = ({ item }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
