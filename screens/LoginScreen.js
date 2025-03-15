@@ -27,7 +27,7 @@ const LoginScreen = ({ navigation }) => {
       await AsyncStorage.setItem("userToken", "dummyToken");
   
       // Navigate to HomeScreen
-      navigation.replace("Home");
+      navigation.replace("HomeScreen");
     } catch (error) {
       Alert.alert("Login Failed", "Something went wrong. Try again.");
     } finally {

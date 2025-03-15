@@ -7,7 +7,9 @@ const ProductCard = ({ item }) => {
   const navigation = useNavigation(); // Lấy navigation từ context
 
   return (
-    <TouchableOpacity style={styles.productCard} onPress={() => navigation.navigate("ProductDetail", { product: item })}>
+    <TouchableOpacity style={styles.productCard} onPress={() => navigation.navigate("ProductDetail", { product: item })}
+    // Cập nhật state activeTab
+>
       <Image source={item.image} style={styles.productImage} />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>

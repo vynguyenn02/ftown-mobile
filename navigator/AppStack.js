@@ -37,8 +37,10 @@ const AppStack = () => {
     <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ gestureEnabled: false }}>
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />
-      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="HomeScreen" component={TabNavigator} options={{ headerShown: false }} />
+      {/* <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} /> */}
+      <Stack.Screen name="ProductDetailScreen" component={TabNavigator}  />
+
     </Stack.Navigator>
   );
 };
