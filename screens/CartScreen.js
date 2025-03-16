@@ -9,24 +9,45 @@ import {
   Image,
   TextInput,
   Alert,
-  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+// Import Header (sidebar) – hiển thị trên tất cả các screen nếu cần
+import Header from "../components/Header";
 
 const CartScreen = ({ cartItems, setCartItems, navigation }) => {
-  const shippingFee = 6.0;
-  const subTotal = cartItems.reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0
-  );
+  // Tính tổng tiền chỉ dựa trên những sản phẩm được chọn
+  const subTotal = cartItems.reduce((acc, item) => {
+    // Nếu item.selected === false, bỏ qua; nếu chưa có, xem như true.
+    if (item.selected === false) return acc;
+    return acc + item.price * item.quantity;
+  }, 0);
+  const shippingFee = subTotal > 0 ? 6.0 : 0; // Nếu không có sản phẩm nào được chọn, phí ship = 0
   const bagTotal = subTotal + shippingFee;
 
   const removeItem = (id) => {
     setCartItems(cartItems.filter((item) => item.id !== id));
   };
 
+  // Toggle checkbox của sản phẩm
+  const toggleSelect = (id) => {
+    setCartItems((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, selected: p.selected === false ? true : false } : p
+      )
+    );
+  };
+
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItemContainer}>
+      {/* Checkbox */}
+      <TouchableOpacity onPress={() => toggleSelect(item.id)}>
+        <Ionicons
+          name={item.selected === false ? "checkbox-outline" : "checkbox"}
+          size={20}
+          color="#333"
+        />
+      </TouchableOpacity>
+
       <Image source={item.image} style={styles.cartItemImage} />
       <View style={styles.cartItemDetails}>
         <Text style={styles.cartItemName}>{item.name}</Text>
@@ -70,36 +91,32 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
     </View>
   );
 
+  // Footer hiển thị Totals
   const renderFooter = () => (
-    <View>
-      <View style={styles.promoContainer}>
-        <TextInput style={styles.promoInput} placeholder="Promo Code" />
-        <TouchableOpacity style={styles.applyButton}>
-          <Text style={styles.applyButtonText}>Apply</Text>
-        </TouchableOpacity>
+    <View style={styles.totalsContainer}>
+      <View style={styles.totalsRow}>
+        <Text style={styles.totalsLabel}>Sub Total</Text>
+        <Text style={styles.totalsValue}>${subTotal.toFixed(2)}</Text>
       </View>
-      <View style={styles.totalsContainer}>
-        <View style={styles.totalsRow}>
-          <Text style={styles.totalsLabel}>Sub Total</Text>
-          <Text style={styles.totalsValue}>${subTotal.toFixed(2)}</Text>
-        </View>
-        <View style={styles.totalsRow}>
-          <Text style={styles.totalsLabel}>Shipping</Text>
-          <Text style={styles.totalsValue}>${shippingFee.toFixed(2)}</Text>
-        </View>
-        <View style={styles.totalsRow}>
-          <Text style={[styles.totalsLabel, { fontWeight: "bold" }]}>Bag Total</Text>
-          <Text style={[styles.totalsValue, { color: "#FF3D00", fontWeight: "bold" }]}>
-            ${bagTotal.toFixed(2)}
-          </Text>
-        </View>
-        <View style={{ height: 150 }} />
+      <View style={styles.totalsRow}>
+        <Text style={styles.totalsLabel}>Shipping</Text>
+        <Text style={styles.totalsValue}>${shippingFee.toFixed(2)}</Text>
       </View>
+      <View style={styles.totalsRow}>
+        <Text style={[styles.totalsLabel, { fontWeight: "bold" }]}>
+          Bag Total
+        </Text>
+        <Text style={[styles.totalsValue, { color: "#FF3D00", fontWeight: "bold" }]}>
+          ${bagTotal.toFixed(2)}
+        </Text>
+      </View>
+      {/* Khoảng trống */}
+      <View style={{ height: 80 }} />
     </View>
   );
 
   const handleCheckout = () => {
-    Alert.alert("Proceed to Checkout", "Chuyển sang màn hình thanh toán");
+    navigation.navigate("CheckoutScreen");
   };
 
   const handleBackToProduct = () => {
@@ -111,24 +128,18 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { position: "relative" }]}>
+      {/* Global Header (sidebar) */}
+      <Header />
+
+      {/* Local Header cho CartScreen */}
+      <View style={styles.localHeader}>
         <TouchableOpacity onPress={handleBackToProduct} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Shopping Bag</Text>
-        <View style={styles.cartIconContainer}>
-          <Ionicons name="cart-outline" size={24} color="#000" />
-          {cartItems.length > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{cartItems.length}</Text>
-            </View>
-          )}
-        </View>
+        <Text style={styles.localHeaderTitle}>Shopping Bag</Text>
       </View>
 
-      {/* FlatList hiển thị sản phẩm và Footer */}
       <FlatList
         data={cartItems}
         keyExtractor={(item) => item.id}
@@ -154,22 +165,24 @@ export default CartScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  header: {
+  // Local header (CartScreen)
+  localHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: 10,
+    backgroundColor: "#fff",
   },
   backButton: { marginRight: 10 },
-  headerTitle: { fontSize: 20, fontWeight: "bold" },
+  localHeaderTitle: { fontSize: 20, fontWeight: "bold" },
   cartIconContainer: { position: "relative" },
   badge: {
     position: "absolute",
     top: -6,
     right: -6,
-    backgroundColor: "#FF3D00",
+    backgroundColor: "#FF3D3D",
     borderRadius: 10,
     paddingHorizontal: 5,
     paddingVertical: 2,
@@ -183,12 +196,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-  cartItemImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 10,
-  },
+  cartItemImage: { width: 60, height: 60, borderRadius: 8, marginRight: 10 },
   cartItemDetails: { flex: 1 },
   cartItemName: { fontSize: 16, fontWeight: "600" },
   cartItemPrice: { fontSize: 14, color: "#666", marginVertical: 4 },
@@ -207,47 +215,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     fontSize: 12,
   },
-  promoContainer: {
-    flexDirection: "row",
-    marginTop: 16,
-    alignItems: "center",
-    paddingHorizontal: 16,
-  },
-  promoInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 40,
-    marginRight: 8,
-  },
-  applyButton: {
-    backgroundColor: "#ddd",
-    paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  applyButtonText: { fontWeight: "bold" },
   totalsContainer: {
     marginTop: 16,
     marginBottom: 16,
     paddingHorizontal: 16,
   },
-  totalsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
+  totalsRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   totalsLabel: { fontSize: 14, color: "#666" },
   totalsValue: { fontSize: 14, color: "#333" },
   checkoutButton: {
     position: "absolute",
     left: 16,
     right: 16,
-    bottom: 20, // Nếu vẫn không hiển thị, thử tăng giá trị bottom
+    bottom: 100, // Điều chỉnh nếu cần để tránh tab bar
     backgroundColor: "#333",
     borderRadius: 8,
     paddingVertical: 14,
@@ -255,9 +235,5 @@ const styles = StyleSheet.create({
     zIndex: 100,
     elevation: 100,
   },
-  checkoutButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  checkoutButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });

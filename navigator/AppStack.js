@@ -6,7 +6,7 @@ import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import ProductDetailScreen from "../screens/ProductDetailScreen";
 import TabNavigator from "../TabNavigator"; // Import Tab Navigation
-
+import OrderScreen from "../screens/OrderScreen";
 const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
@@ -40,6 +40,7 @@ const AppStack = () => {
       <Stack.Screen name="HomeScreen" component={TabNavigator} options={{ headerShown: false }} />
       {/* <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} /> */}
       <Stack.Screen name="ProductDetailScreen" component={TabNavigator}  />
+      <Stack.Screen name="OrderScreen" component={OrderScreen} />
 
     </Stack.Navigator>
   );

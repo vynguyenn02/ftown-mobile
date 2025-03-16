@@ -10,6 +10,8 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
+// Global Header (sidebar)
+import Header from "../components/Header";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 36) / 2;
@@ -27,7 +29,7 @@ const mockProducts = [
     price: 212.99,
     rating: 5.0,
     reviews: 123,
-    image: { uri: "https://picsum.photos/200/300" },
+    image: { uri: "https://levents.asia/cdn/shop/files/Pink_LPOSOCOC238UP0101FW24_1.jpg?v=1736326512&width=713" },
   },
   {
     id: "2",
@@ -35,7 +37,7 @@ const mockProducts = [
     price: 162.99,
     rating: 5.0,
     reviews: 88,
-    image: { uri: "https://picsum.photos/200/301" },
+    image: { uri: "https://levents.asia/cdn/shop/files/White_LTSOVLKA341UW0101FW24_1.jpg?v=1734626216&width=713" },
   },
   {
     id: "3",
@@ -43,30 +45,12 @@ const mockProducts = [
     price: 99.99,
     rating: 4.5,
     reviews: 56,
-    image: { uri: "https://picsum.photos/200/302" },
+    image: { uri: "https://levents.asia/cdn/shop/files/Blue_LJEJRCOP228UB0128FW24_1.jpg?v=1736327387&width=713" },
   },
-  // Thêm sản phẩm nếu cần
 ];
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = ({ navigation, cartItems = [] }) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
-
-  const renderCategoryItem = ({ item }) => {
-    const isActive = item.id === selectedCategory;
-    return (
-      <TouchableOpacity
-        style={[
-          styles.categoryButton,
-          isActive && { backgroundColor: "#000" },
-        ]}
-        onPress={() => setSelectedCategory(item.id)}
-      >
-        <Text style={[styles.categoryText, isActive && { color: "#fff" }]}>
-          {item.title}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
 
   const renderProductItem = ({ item }) => (
     <TouchableOpacity
@@ -94,33 +78,51 @@ const HomeScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  // Header nội dung cho FlatList
+  const renderCategoryItem = ({ item }) => {
+    const isActive = item.id === selectedCategory;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.categoryButton,
+          isActive && { backgroundColor: "#000" },
+        ]}
+        onPress={() => setSelectedCategory(item.id)}
+      >
+        <Text style={[styles.categoryText, isActive && { color: "#fff" }]}>
+          {item.title}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  // ListHeader thay đổi: hiển thị thông tin giỏ hàng
   const ListHeader = () => (
-    <View>
-      {/* Header chào user */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerSubTitle}>Hello, Welcome 👋</Text>
-          <Text style={styles.headerTitle}>Albert Stevano</Text>
+    <View style={{ marginBottom: 10 }}>
+      {/* Cart Info Row */}
+      <View style={styles.cartInfoRow}>
+        <Text style={styles.cartInfoText}>
+          You have {cartItems.length} item{cartItems.length !== 1 ? "s" : ""}
+        </Text>
+        <View style={styles.cartIconWithBadge}>
+          <Ionicons name="cart-outline" size={40} color="#000" />
+          {cartItems.length > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cartItems.length}</Text>
+            </View>
+          )}
         </View>
-        <TouchableOpacity style={styles.userIcon}>
-          <Ionicons name="person-circle-outline" size={40} color="#000" />
-        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
       <View style={styles.searchRow}>
         <Ionicons name="search" size={20} color="#000" style={{ marginRight: 8 }} />
-        <TextInput
-          placeholder="Search clothes..."
-          style={styles.searchInput}
-        />
+        <TextInput placeholder="Search clothes..." style={styles.searchInput} />
         <TouchableOpacity style={styles.filterButton}>
           <Feather name="filter" size={18} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Danh mục */}
+      {/* Categories */}
       <View style={{ marginTop: 15 }}>
         <FlatList
           data={categories}
@@ -136,6 +138,10 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      {/* Global Header (sidebar) */}
+      <Header />
+
+      {/* Danh sách sản phẩm */}
       <FlatList
         data={mockProducts}
         keyExtractor={(item) => item.id}
@@ -144,7 +150,6 @@ const HomeScreen = ({ navigation }) => {
         ListHeaderComponent={ListHeader}
         contentContainerStyle={styles.productListContainer}
       />
-      {/* Nếu dùng tab navigator, bottom nav có thể được quản lý ở cấp cao hơn */}
     </View>
   );
 };
@@ -153,16 +158,39 @@ export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f8f8" },
-  header: {
+  // Cart Info Row trong ListHeader
+  cartInfoRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 40,
+    paddingBottom: 10,
+    backgroundColor: "#fff",
   },
-  headerSubTitle: { fontSize: 14, color: "#666" },
-  headerTitle: { fontSize: 18, fontWeight: "bold", marginTop: 2, color: "#000" },
-  userIcon: { width: 40, height: 40 },
+  cartInfoText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  cartIconWithBadge: {
+    position: "relative",
+  },
+  cartBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#FF3D3D",
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+  },
+  cartBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  // Search
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -174,6 +202,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14 },
   filterButton: { backgroundColor: "#000", padding: 8, borderRadius: 8 },
+  // Category
   categoryButton: {
     marginRight: 10,
     backgroundColor: "#eee",
@@ -182,6 +211,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   categoryText: { color: "#000", fontSize: 14 },
+  // Product List
   productListContainer: { paddingHorizontal: 10, paddingBottom: 80 },
   productCard: {
     width: CARD_WIDTH,

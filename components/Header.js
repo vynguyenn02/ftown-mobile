@@ -8,14 +8,18 @@ import {
   Dimensions,
   Pressable,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native"; // 1) Import hook
 import { MaterialIcons, FontAwesome, Feather } from "@expo/vector-icons";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 const Header = () => {
+  // 2) Lấy navigation bằng hook
+  const navigation = useNavigation();
+
   const [isSidebarVisible, setSidebarVisible] = useState(false);
-  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current; // Sidebar bắt đầu từ ngoài màn hình (bên phải)
+  const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
 
   const openSidebar = () => {
     setSidebarVisible(true);
@@ -36,6 +40,7 @@ const Header = () => {
 
   return (
     <>
+      {/* Thanh tiêu đề */}
       <View style={styles.header}>
         <Text style={styles.logo}>FUNKYTOWN</Text>
         <TouchableOpacity onPress={openSidebar}>
@@ -61,7 +66,11 @@ const Header = () => {
             </View>
 
             {/* Sidebar Menu */}
-            <TouchableOpacity style={styles.menuItem}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              // 3) Gọi navigation.navigate("OrderScreen")
+              onPress={() => navigation.navigate("OrderScreen")}
+            >
               <FontAwesome name="shopping-bag" size={20} color="black" />
               <Text style={styles.menuText}>MY ORDER</Text>
               <View style={styles.badge}>
@@ -75,21 +84,6 @@ const Header = () => {
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>11</Text>
               </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem}>
-              <Feather name="percent" size={20} color="black" />
-              <Text style={styles.menuText}>PROMO & DISCOUNT</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem}>
-              <Feather name="gift" size={20} color="black" />
-              <Text style={styles.menuText}>SEND A GIFT</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem}>
-              <Feather name="settings" size={20} color="black" />
-              <Text style={styles.menuText}>SETTINGS</Text>
             </TouchableOpacity>
 
             {/* Bottom Buttons */}

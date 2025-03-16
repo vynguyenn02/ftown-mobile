@@ -8,6 +8,8 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+// Import Header (sidebar)
+import Header from "../components/Header";
 
 const ProductDetailScreen = ({
   route,
@@ -17,12 +19,14 @@ const ProductDetailScreen = ({
 }) => {
   const { product } = route.params;
   const [images] = useState([
-    { id: "1", uri: "https://picsum.photos/200/300" },
-    { id: "2", uri: "https://picsum.photos/200/301" },
-    { id: "3", uri: "https://picsum.photos/200/302" },
+    { id: "1", uri: "https://levents.asia/cdn/shop/files/Pink_LPOSOCOC238UP0101FW24_2.jpg?v=1736326513&width=713" },
+    { id: "2", uri: "https://levents.asia/cdn/shop/files/White_LTSOVLKA341UW0101FW24_2.jpg?v=1734626216&width=713" },
+    { id: "3", uri: "https://levents.asia/cdn/shop/files/Blue_LJEJRCOP228UB0128FW24_2.jpg?v=1736327387&width=713" },
   ]);
   const [selectedImage, setSelectedImage] = useState(images[0].uri);
   const [quantity, setQuantity] = useState(1);
+  // State cho toast message
+  const [showToast, setShowToast] = useState(false);
 
   const incrementQty = () => setQuantity((q) => q + 1);
   const decrementQty = () => setQuantity((q) => (q > 1 ? q - 1 : 1));
@@ -46,27 +50,42 @@ const ProductDetailScreen = ({
       };
       setCartItems((prev) => [...prev, newItem]);
     }
-    // Optionally, navigate to Cart screen:
-    // navigation.navigate("Cart")
+    // Hiển thị toast thông báo thành công
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
+    // Optionally, bạn có thể điều hướng sang CartScreen
+    // navigation.navigate("CartScreen")
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+      {/* Global Header (Sidebar) */}
+      <Header />
+
+      {/* Local Top Bar */}
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => navigation.goBack("HomeScreen")}>
           <Ionicons name="chevron-back" size={28} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Details</Text>
-        <TouchableOpacity>
-          <Ionicons name="heart-outline" size={24} color="#000" />
-        </TouchableOpacity>
+        {/* Container chứa 2 icon: Heart và Cart */}
+        <View style={styles.topBarRight}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="heart-outline" size={24} color="#000" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate("CartScreen")}
+          >
+            <Ionicons name="cart-outline" size={24} color="#000" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Image Section */}
         <View style={styles.imageSection}>
-          {/* Thumbnails: dùng ScrollView horizontal */}
+          {/* Thumbnails: sử dụng ScrollView horizontal */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -92,7 +111,7 @@ const ProductDetailScreen = ({
           <Image source={{ uri: selectedImage }} style={styles.mainImage} />
         </View>
 
-        {/* Details */}
+        {/* Details Section */}
         <View style={styles.detailsContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.productName}>{product.name}</Text>
@@ -107,9 +126,15 @@ const ProductDetailScreen = ({
 
           <Text style={styles.sectionLabel}>Color</Text>
           <View style={styles.colorContainer}>
-            <TouchableOpacity style={[styles.colorCircle, { backgroundColor: "#FC7B54" }]} />
-            <TouchableOpacity style={[styles.colorCircle, { backgroundColor: "#2196F3" }]} />
-            <TouchableOpacity style={[styles.colorCircle, { backgroundColor: "#000" }]} />
+            <TouchableOpacity
+              style={[styles.colorCircle, { backgroundColor: "#FC7B54" }]}
+            />
+            <TouchableOpacity
+              style={[styles.colorCircle, { backgroundColor: "#2196F3" }]}
+            />
+            <TouchableOpacity
+              style={[styles.colorCircle, { backgroundColor: "#000" }]}
+            />
           </View>
 
           <Text style={styles.sectionLabel}>Size</Text>
@@ -144,6 +169,13 @@ const ProductDetailScreen = ({
           <Text style={styles.addToCartText}>Add to Cart</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Toast Message */}
+      {showToast && (
+        <View style={styles.toastContainer}>
+          <Text style={styles.toastText}>Product added to cart!</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -152,31 +184,86 @@ export default ProductDetailScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 40, paddingBottom: 10 },
+  // Local Top Bar
+  topBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 40,
+    paddingBottom: 10,
+    backgroundColor: "#fff",
+  },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
+  topBarRight: { flexDirection: "row", alignItems: "center" },
+  iconButton: { marginLeft: 10 },
   imageSection: { paddingHorizontal: 16, marginBottom: 10 },
   thumbnailsContainer: { paddingVertical: 10 },
   thumbnailWrapper: { marginRight: 10 },
-  thumbnailImage: { width: 50, height: 50, borderRadius: 6, resizeMode: "cover" },
+  thumbnailImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+    resizeMode: "cover",
+  },
   selectedThumbnail: { borderWidth: 2, borderColor: "#FC7B54" },
   mainImage: { width: "100%", height: 300, borderRadius: 8, resizeMode: "cover" },
   detailsContainer: { paddingHorizontal: 16 },
-  titleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
   productName: { fontSize: 20, fontWeight: "bold", maxWidth: "70%" },
   ratingRow: { flexDirection: "row", alignItems: "center" },
   ratingText: { marginLeft: 4, fontSize: 14, color: "#555" },
-  priceText: { fontSize: 18, color: "#FC7B54", fontWeight: "bold", marginBottom: 10 },
+  priceText: {
+    fontSize: 18,
+    color: "#FC7B54",
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
   sectionLabel: { fontSize: 16, fontWeight: "600", marginTop: 10, marginBottom: 6 },
   colorContainer: { flexDirection: "row", marginBottom: 8 },
   colorCircle: { width: 24, height: 24, borderRadius: 12, marginRight: 10 },
   sizeContainer: { flexDirection: "row", marginBottom: 8 },
-  sizeButton: { backgroundColor: "#f0f0f0", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6, marginRight: 8 },
+  sizeButton: {
+    backgroundColor: "#f0f0f0",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginRight: 8,
+  },
   sizeText: { fontSize: 14, color: "#000" },
   quantityRow: { flexDirection: "row", alignItems: "center", marginVertical: 10 },
   qtyBtn: { backgroundColor: "#f0f0f0", borderRadius: 6, padding: 6 },
   qtyValue: { marginHorizontal: 12, fontSize: 16, fontWeight: "600" },
   description: { fontSize: 14, lineHeight: 20, color: "#555", marginBottom: 20 },
   footer: { borderTopWidth: 1, borderTopColor: "#ddd", padding: 16 },
-  addToCartButton: { backgroundColor: "#333", borderRadius: 8, paddingVertical: 14, alignItems: "center" },
+  addToCartButton: {
+    backgroundColor: "#333",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
   addToCartText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  // Toast style
+  toastContainer: {
+    position: "absolute",
+    bottom: 80,
+    left: 16,
+    right: 16,
+    backgroundColor: "#333",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+    zIndex: 100,
+    elevation: 100,
+  },
+  toastText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "bold",
+  },
 });
