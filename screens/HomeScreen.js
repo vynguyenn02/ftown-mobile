@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,13 @@ import {
   Image,
   TextInput,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 // Global Header (sidebar)
 import Header from "../components/Header";
+// Import API service đã cấu hình
+import productApi from "../api/productApi";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 36) / 2;
@@ -22,35 +25,30 @@ const categories = [
   { id: "tshirt", title: "T-Shirt" },
 ];
 
-const mockProducts = [
-  {
-    id: "1",
-    name: "Modern Light Clothes",
-    price: 212.99,
-    rating: 5.0,
-    reviews: 123,
-    image: { uri: "https://levents.asia/cdn/shop/files/Pink_LPOSOCOC238UP0101FW24_1.jpg?v=1736326512&width=713" },
-  },
-  {
-    id: "2",
-    name: "Light Dress Bless",
-    price: 162.99,
-    rating: 5.0,
-    reviews: 88,
-    image: { uri: "https://levents.asia/cdn/shop/files/White_LTSOVLKA341UW0101FW24_1.jpg?v=1734626216&width=713" },
-  },
-  {
-    id: "3",
-    name: "Casual Streetwear",
-    price: 99.99,
-    rating: 4.5,
-    reviews: 56,
-    image: { uri: "https://levents.asia/cdn/shop/files/Blue_LJEJRCOP228UB0128FW24_1.jpg?v=1736327387&width=713" },
-  },
-];
-
 const HomeScreen = ({ navigation, cartItems = [] }) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch API getAllProducts khi component mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        const response = await productApi.getAllProducts(1, 30);
+        // Giả sử kết cấu response.data.data chứa mảng sản phẩm
+        if (response.data && response.data.data) {
+          setProducts(response.data.data);
+        }
+      } catch (error) {
+        console.error("Lỗi khi fetch sản phẩm:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const renderProductItem = ({ item }) => (
     <TouchableOpacity
@@ -61,13 +59,13 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
         })
       }
     >
-      <Image source={item.image} style={styles.productImage} />
+      <Image source={{ uri: item.imagePath || item.image }} style={styles.productImage} />
       <View style={{ padding: 8 }}>
-        <Text style={styles.productName}>{item.name}</Text>
+        <Text style={styles.productName}>{item.name || item.productName}</Text>
         <View style={styles.ratingRow}>
           <MaterialIcons name="star" size={14} color="#FFD700" />
           <Text style={styles.ratingText}>
-            {item.rating} ({item.reviews} reviews)
+            {item.rating || 0} ({item.reviews || 0} reviews)
           </Text>
         </View>
         <Text style={styles.productPrice}>${item.price}</Text>
@@ -82,20 +80,15 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
     const isActive = item.id === selectedCategory;
     return (
       <TouchableOpacity
-        style={[
-          styles.categoryButton,
-          isActive && { backgroundColor: "#000" },
-        ]}
+        style={[styles.categoryButton, isActive && { backgroundColor: "#000" }]}
         onPress={() => setSelectedCategory(item.id)}
       >
-        <Text style={[styles.categoryText, isActive && { color: "#fff" }]}>
-          {item.title}
-        </Text>
+        <Text style={[styles.categoryText, isActive && { color: "#fff" }]}>{item.title}</Text>
       </TouchableOpacity>
     );
   };
 
-  // ListHeader thay đổi: hiển thị thông tin giỏ hàng
+  // Header của danh sách (cart info, search bar, category list)
   const ListHeader = () => (
     <View style={{ marginBottom: 10 }}>
       {/* Cart Info Row */}
@@ -141,15 +134,21 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
       {/* Global Header (sidebar) */}
       <Header />
 
-      {/* Danh sách sản phẩm */}
-      <FlatList
-        data={mockProducts}
-        keyExtractor={(item) => item.id}
-        renderItem={renderProductItem}
-        numColumns={2}
-        ListHeaderComponent={ListHeader}
-        contentContainerStyle={styles.productListContainer}
-      />
+      {isLoading ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#000" />
+        </View>
+      ) : (
+        // Danh sách sản phẩm
+        <FlatList
+          data={products}
+          keyExtractor={(item, index) => item.id ? String(item.id) : String(index)}
+          renderItem={renderProductItem}
+          numColumns={2}
+          ListHeaderComponent={ListHeader}
+          contentContainerStyle={styles.productListContainer}
+        />
+      )}
     </View>
   );
 };
@@ -158,7 +157,6 @@ export default HomeScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8f8f8" },
-  // Cart Info Row trong ListHeader
   cartInfoRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -168,14 +166,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     backgroundColor: "#fff",
   },
-  cartInfoText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  cartIconWithBadge: {
-    position: "relative",
-  },
+  cartInfoText: { fontSize: 16, fontWeight: "bold", color: "#333" },
+  cartIconWithBadge: { position: "relative" },
   cartBadge: {
     position: "absolute",
     top: -6,
@@ -185,12 +177,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 2,
   },
-  cartBadgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  // Search
+  cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "bold" },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -202,7 +189,6 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 14 },
   filterButton: { backgroundColor: "#000", padding: 8, borderRadius: 8 },
-  // Category
   categoryButton: {
     marginRight: 10,
     backgroundColor: "#eee",
@@ -211,7 +197,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   categoryText: { color: "#000", fontSize: 14 },
-  // Product List
   productListContainer: { paddingHorizontal: 10, paddingBottom: 80 },
   productCard: {
     width: CARD_WIDTH,

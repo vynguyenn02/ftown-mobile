@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,33 +6,60 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 // Import Header (sidebar)
 import Header from "../components/Header";
+// Import API service (đảm bảo alias hoặc đường dẫn tương đối được thiết lập đúng)
+import productApi from "../api/productApi";
 
-const ProductDetailScreen = ({
-  route,
-  navigation,
-  cartItems,
-  setCartItems,
-}) => {
-  const { product } = route.params;
-  const [images] = useState([
-    { id: "1", uri: "https://levents.asia/cdn/shop/files/Pink_LPOSOCOC238UP0101FW24_2.jpg?v=1736326513&width=713" },
-    { id: "2", uri: "https://levents.asia/cdn/shop/files/White_LTSOVLKA341UW0101FW24_2.jpg?v=1734626216&width=713" },
-    { id: "3", uri: "https://levents.asia/cdn/shop/files/Blue_LJEJRCOP228UB0128FW24_2.jpg?v=1736327387&width=713" },
-  ]);
-  const [selectedImage, setSelectedImage] = useState(images[0].uri);
+const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => {
+  const { product: initialProduct } = route.params;
+  const [product, setProduct] = useState(initialProduct);
+  const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(initialProduct.imagePath);
   const [quantity, setQuantity] = useState(1);
-  // State cho toast message
   const [showToast, setShowToast] = useState(false);
+
+  // Khi product được fetch hoặc cập nhật từ API, cập nhật selectedImage nếu cần
+  useEffect(() => {
+    if (product && product.imagePath) {
+      setSelectedImage(product.imagePath);
+    }
+  }, [product]);
+
+  // Gọi API lấy chi tiết sản phẩm theo productId (và tùy chọn accountId nếu có)
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      setLoading(true);
+      try {
+        const response = await productApi.getProductById(product.productId);
+        if (response.data && response.data.data) {
+          setProduct(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching product details", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductDetails();
+  }, [product.productId]);
+
+  // Tạo mảng thumbnails từ variants (loại bỏ ảnh trùng)
+  const thumbnails = product.variants
+    ? Array.from(new Set(product.variants.map((v) => v.imagePath)))
+    : [];
 
   const incrementQty = () => setQuantity((q) => q + 1);
   const decrementQty = () => setQuantity((q) => (q > 1 ? q - 1 : 1));
 
   const handleAddToCart = () => {
-    const existingIndex = cartItems.findIndex((item) => item.id === product.id);
+    const existingIndex = cartItems.findIndex(
+      (item) => item.id === product.productId
+    );
     if (existingIndex >= 0) {
       setCartItems((prev) => {
         const updated = [...prev];
@@ -41,21 +68,26 @@ const ProductDetailScreen = ({
       });
     } else {
       const newItem = {
-        id: product.id,
+        id: product.productId,
         name: product.name,
-        price: product.price,
+        price: product.variants && product.variants[0] ? product.variants[0].price : product.price,
         image: { uri: selectedImage },
         quantity: quantity,
         size: "M",
       };
       setCartItems((prev) => [...prev, newItem]);
     }
-    // Hiển thị toast thông báo thành công
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2000);
-    // Optionally, bạn có thể điều hướng sang CartScreen
-    // navigation.navigate("CartScreen")
   };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -64,11 +96,10 @@ const ProductDetailScreen = ({
 
       {/* Local Top Bar */}
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack("HomeScreen")}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Details</Text>
-        {/* Container chứa 2 icon: Heart và Cart */}
         <View style={styles.topBarRight}>
           <TouchableOpacity style={styles.iconButton}>
             <Ionicons name="heart-outline" size={24} color="#000" />
@@ -85,29 +116,29 @@ const ProductDetailScreen = ({
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Image Section */}
         <View style={styles.imageSection}>
-          {/* Thumbnails: sử dụng ScrollView horizontal */}
+          {/* Thumbnails hiển thị ảnh nhỏ từ variants */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.thumbnailsContainer}
           >
-            {images.map((item) => (
+            {thumbnails.map((uri, index) => (
               <TouchableOpacity
-                key={item.id}
+                key={index.toString()}
                 style={styles.thumbnailWrapper}
-                onPress={() => setSelectedImage(item.uri)}
+                onPress={() => setSelectedImage(uri)}
               >
                 <Image
-                  source={{ uri: item.uri }}
+                  source={{ uri }}
                   style={[
                     styles.thumbnailImage,
-                    selectedImage === item.uri && styles.selectedThumbnail,
+                    selectedImage === uri && styles.selectedThumbnail,
                   ]}
                 />
               </TouchableOpacity>
             ))}
           </ScrollView>
-          {/* Ảnh chính */}
+          {/* Ảnh chính hiển thị product.imagePath */}
           <Image source={{ uri: selectedImage }} style={styles.mainImage} />
         </View>
 
@@ -122,7 +153,11 @@ const ProductDetailScreen = ({
               </Text>
             </View>
           </View>
-          <Text style={styles.priceText}>${product.price.toFixed(2)}</Text>
+          <Text style={styles.priceText}>
+            ${product.variants && product.variants[0]
+              ? product.variants[0].price.toFixed(2)
+              : product.price.toFixed(2)}
+          </Text>
 
           <Text style={styles.sectionLabel}>Color</Text>
           <View style={styles.colorContainer}>
@@ -158,7 +193,7 @@ const ProductDetailScreen = ({
 
           <Text style={styles.description}>
             {product.description ||
-              "This is a simple and elegant piece that is perfect for those who want minimalist clothes."}
+              "This is a simple and elegant piece perfect for those who want minimalist clothes."}
           </Text>
         </View>
       </ScrollView>
@@ -184,6 +219,7 @@ export default ProductDetailScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   // Local Top Bar
   topBar: {
     flexDirection: "row",
@@ -261,9 +297,5 @@ const styles = StyleSheet.create({
     zIndex: 100,
     elevation: 100,
   },
-  toastText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
-  },
+  toastText: { color: "#fff", fontSize: 14, fontWeight: "bold" },
 });
