@@ -8,13 +8,14 @@ import {
   ScrollView,
   Image,
 } from "react-native";
-import Header from "../components/Header"; 
+import Header from "../components/Header";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const ProfileScreen = ({ navigation }) => {
   const userName = "Nguyễn Ngọc Tường Vy";
   const userPhone = "0387 502 824";
-  const userAvatar = "https://picsum.photos/200"; 
+  const userAvatar = "https://picsum.photos/200";
   const userCoin = 109;
 
   const handleViewAllOrders = () => {
@@ -26,7 +27,6 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleAddressBook = () => {
-    // Điều hướng sang AddressScreen
     navigation.navigate("AddressScreen");
   };
 
@@ -34,73 +34,89 @@ const ProfileScreen = ({ navigation }) => {
     navigation.navigate("ProfileInfoScreen");
   };
 
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("userToken");
+    navigation.replace("Login");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Thông tin user */}
-        <View style={styles.userInfoContainer}>
-          <Image source={{ uri: userAvatar }} style={styles.avatar} />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.userName}>{userName}</Text>
-            <Text style={styles.userPhone}>{userPhone}</Text>
+      <View style={{ flex: 1 }}>
+        <Header />
+  
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }} // ⬅ đủ lớn để tránh bị che
+        >
+          {/* Thông tin người dùng */}
+          <View style={styles.userInfoContainer}>
+            <Image source={{ uri: userAvatar }} style={styles.avatar} />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.userName}>{userName}</Text>
+              <Text style={styles.userPhone}>{userPhone}</Text>
+            </View>
+            <View style={styles.coinContainer}>
+              <Text style={styles.coinText}>{userCoin}</Text>
+            </View>
           </View>
-          <View style={styles.coinContainer}>
-            <Text style={styles.coinText}>{userCoin}</Text>
+  
+          {/* Đơn hàng */}
+          <View style={styles.orderSection}>
+            <View style={styles.orderHeader}>
+              <Text style={styles.orderHeaderText}>Đơn của tôi</Text>
+              <TouchableOpacity onPress={handleViewAllOrders}>
+                <Text style={styles.viewAllText}>Xem tất cả</Text>
+              </TouchableOpacity>
+            </View>
+  
+            <View style={styles.orderStatusRow}>
+              <TouchableOpacity
+                style={styles.orderStatusItem}
+                onPress={() => handleOrderStatus("Đang xử lý")}
+              >
+                <MaterialIcons name="pending-actions" size={24} color="#333" />
+                <Text style={styles.orderStatusLabel}>Đang xử lý</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.orderStatusItem}
+                onPress={() => handleOrderStatus("Đã giao")}
+              >
+                <Ionicons name="checkmark-done-circle-outline" size={24} color="#333" />
+                <Text style={styles.orderStatusLabel}>Đã giao</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.orderStatusItem}
+                onPress={() => handleOrderStatus("Đổi/Trả")}
+              >
+                <Ionicons name="refresh-circle-outline" size={24} color="#333" />
+                <Text style={styles.orderStatusLabel}>Đổi/Trả</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-
-        {/* Đơn của tôi */}
-        <View style={styles.orderSection}>
-          <View style={styles.orderHeader}>
-            <Text style={styles.orderHeaderText}>Đơn của tôi</Text>
-            <TouchableOpacity onPress={handleViewAllOrders}>
-              <Text style={styles.viewAllText}>Xem tất cả</Text>
+  
+          {/* Thông tin tài khoản */}
+          <View style={styles.accountSection}>
+            <TouchableOpacity style={styles.bigAccountItem} onPress={handleAddressBook}>
+              <Ionicons name="location-outline" size={24} color="#333" style={styles.itemIcon} />
+              <Text style={styles.bigAccountItemText}>Sổ địa chỉ</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.bigAccountItem} onPress={handlePersonalInfo}>
+              <Ionicons name="person-outline" size={24} color="#333" style={styles.itemIcon} />
+              <Text style={styles.bigAccountItemText}>Thông tin cá nhân</Text>
             </TouchableOpacity>
           </View>
-
-          <View style={styles.orderStatusRow}>
-            <TouchableOpacity
-              style={styles.orderStatusItem}
-              onPress={() => handleOrderStatus("Dạng xử lý")}
-            >
-              <MaterialIcons name="pending-actions" size={24} color="#333" />
-              <Text style={styles.orderStatusLabel}>Dạng xử lý</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.orderStatusItem}
-              onPress={() => handleOrderStatus("Đã giao")}
-            >
-              <Ionicons name="checkmark-done-circle-outline" size={24} color="#333" />
-              <Text style={styles.orderStatusLabel}>Đã giao</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.orderStatusItem}
-              onPress={() => handleOrderStatus("Đổi/Trả")}
-            >
-              <Ionicons name="refresh-circle-outline" size={24} color="#333" />
-              <Text style={styles.orderStatusLabel}>Đổi/Trả</Text>
+  
+          {/* ✅ Nút logout nằm trong ScrollView nên luôn thấy được */}
+          <View style={{ paddingHorizontal: 16 }}>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Đăng xuất</Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* Khu vực Tài khoản (2 mục to hơn) */}
-        <View style={styles.accountSection}>
-          <TouchableOpacity style={styles.bigAccountItem} onPress={handleAddressBook}>
-            <Ionicons name="location-outline" size={24} color="#333" style={styles.itemIcon} />
-            <Text style={styles.bigAccountItemText}>Sổ địa chỉ</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bigAccountItem} onPress={handlePersonalInfo}>
-            <Ionicons name="person-outline" size={24} color="#333" style={styles.itemIcon} />
-            <Text style={styles.bigAccountItemText}>Thông tin cá nhân</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
+  
 };
 
 export default ProfileScreen;
@@ -142,8 +158,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-
-  // Đơn của tôi
   orderSection: {
     backgroundColor: "#fff",
     marginBottom: 8,
@@ -177,8 +191,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
-
-  // Tài khoản (2 mục to hơn)
   accountSection: {
     backgroundColor: "#fff",
     marginBottom: 8,
@@ -196,8 +208,21 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   bigAccountItemText: {
-    fontSize: 18,      // to hơn
+    fontSize: 18,
     color: "#333",
-    fontWeight: "500", // đậm hơn 1 chút
+    fontWeight: "500",
+  },
+  logoutButton: {
+    backgroundColor: "red", // test
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  logoutText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

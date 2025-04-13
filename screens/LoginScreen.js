@@ -11,8 +11,8 @@ import {
   Platform,
 } from "react-native";
 import { FontAwesome, Feather } from "@expo/vector-icons";
-import { API_URL } from "@env";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { login } from "../api/authApi";
 
 const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
@@ -21,20 +21,24 @@ const LoginScreen = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      return Alert.alert("Thông báo", "Vui lòng nhập email và mật khẩu.");
+    }
+
     setLoading(true);
     try {
-      // Simulate successful login by setting a dummy token
-      await AsyncStorage.setItem("userToken", "dummyToken");
-  
-      // Navigate to HomeScreen
+      const token = await login(email, password);
+
+      await AsyncStorage.setItem("userToken", token);
       navigation.replace("HomeScreen");
     } catch (error) {
-      Alert.alert("Login Failed", "Something went wrong. Try again.");
+      console.log("LOGIN ERROR:", error);
+      Alert.alert("Lỗi", error.message || "Đăng nhập thất bại.");
     } finally {
       setLoading(false);
     }
   };
-  
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -51,7 +55,7 @@ const LoginScreen = ({ navigation }) => {
         keyboardType="email-address"
         autoCapitalize="none"
       />
-      
+
       <View style={styles.passwordContainer}>
         <TextInput
           style={styles.passwordInput}
@@ -68,13 +72,9 @@ const LoginScreen = ({ navigation }) => {
           />
         </TouchableOpacity>
       </View>
-      
+
       <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
         <Text style={styles.loginButtonText}>Login</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
-        <Text style={styles.forgotPassword}>forgot your password?</Text>
       </TouchableOpacity>
 
       <Text style={styles.orText}>or use other login method</Text>
@@ -83,11 +83,15 @@ const LoginScreen = ({ navigation }) => {
         <FontAwesome name="google" size={20} color="black" />
         <Text style={styles.socialButtonText}>Login with Google</Text>
       </TouchableOpacity>
-      
-    
-      
+
       <Text style={styles.registerText}>
-        haven’t an account yet? <Text style={styles.registerNow} onPress={() => navigation.navigate("Register")}>register now</Text>
+        Haven’t an account yet?{" "}
+        <Text
+          style={styles.registerNow}
+          onPress={() => navigation.navigate("Register")}
+        >
+          Register now
+        </Text>
       </Text>
 
       {loading && <ActivityIndicator size="large" color="#000" />}
@@ -150,11 +154,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
-  },
-  forgotPassword: {
-    color: "#777",
-    fontStyle: "italic",
-    marginBottom: 20,
   },
   orText: {
     color: "#777",

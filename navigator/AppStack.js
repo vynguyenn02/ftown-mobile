@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import ProductDetailScreen from "../screens/ProductDetailScreen";
-import TabNavigator from "../TabNavigator"; // Import Tab Navigation
+import TabNavigator from "../TabNavigator";
 import OrderScreen from "../screens/OrderScreen";
+
 const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
@@ -16,7 +18,7 @@ const AppStack = () => {
     const checkToken = async () => {
       try {
         const token = await AsyncStorage.getItem("userToken");
-        setInitialRoute(token ? "Main" : "Login");
+        setInitialRoute(token ? "HomeScreen" : "Login");
       } catch (error) {
         setInitialRoute("Login");
       }
@@ -38,10 +40,8 @@ const AppStack = () => {
       <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
       <Stack.Screen name="HomeScreen" component={TabNavigator} options={{ headerShown: false }} />
-      {/* <Stack.Screen name="ProductDetail" component={ProductDetailScreen} options={{ headerShown: false }} /> */}
-      <Stack.Screen name="ProductDetailScreen" component={TabNavigator}  />
+      <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} options={{ headerShown: false }} />
       <Stack.Screen name="OrderScreen" component={OrderScreen} />
-
     </Stack.Navigator>
   );
 };
