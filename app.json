@@ -16,7 +16,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/koi-the.webp",
+        "foregroundImage": "./assets/funkytown-splash.png",
         "backgroundColor": "#ffffff"
       }
     },
