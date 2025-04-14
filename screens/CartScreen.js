@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   SafeAreaView,
   View,
@@ -11,10 +11,30 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-// Import Header (sidebar) – hiển thị trên tất cả các screen nếu cần
+// Import Header (sidebar)
 import Header from "../components/Header";
+// Import API service cho giỏ hàng
+import cartService from "../api/cartApi";
 
-const CartScreen = ({ cartItems, setCartItems, navigation }) => {
+const CartScreen = ({ accountId, cartItems, setCartItems, navigation }) => {
+  // Khi component mount, gọi API get_cart để lấy thông tin giỏ hàng với accountId được truyền vào
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const response = await cartService.getCart(accountId);
+        if (response.data && response.data.data) {
+          setCartItems(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error fetching cart", error);
+      }
+    };
+
+    if (accountId != null) {
+      fetchCart();
+    }
+  }, [accountId, setCartItems]);
+
   // Tính tổng tiền chỉ dựa trên những sản phẩm được chọn
   const subTotal = cartItems.reduce((acc, item) => {
     // Nếu item.selected === false, bỏ qua; nếu chưa có, xem như true.
@@ -24,15 +44,17 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
   const shippingFee = subTotal > 0 ? 6.0 : 0; // Nếu không có sản phẩm nào được chọn, phí ship = 0
   const bagTotal = subTotal + shippingFee;
 
-  const removeItem = (id) => {
-    setCartItems(cartItems.filter((item) => item.id !== id));
+  const removeItem = (productVariantId) => {
+    setCartItems(cartItems.filter((item) => item.productVariantId !== productVariantId));
   };
 
   // Toggle checkbox của sản phẩm
-  const toggleSelect = (id) => {
+  const toggleSelect = (productVariantId) => {
     setCartItems((prev) =>
       prev.map((p) =>
-        p.id === id ? { ...p, selected: p.selected === false ? true : false } : p
+        p.productVariantId === productVariantId
+          ? { ...p, selected: p.selected === false ? true : false }
+          : p
       )
     );
   };
@@ -40,7 +62,7 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItemContainer}>
       {/* Checkbox */}
-      <TouchableOpacity onPress={() => toggleSelect(item.id)}>
+      <TouchableOpacity onPress={() => toggleSelect(item.productVariantId)}>
         <Ionicons
           name={item.selected === false ? "checkbox-outline" : "checkbox"}
           size={20}
@@ -48,10 +70,15 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
         />
       </TouchableOpacity>
 
-      <Image source={item.image} style={styles.cartItemImage} />
+      <Image source={{ uri: item.imagePath }} style={styles.cartItemImage} />
       <View style={styles.cartItemDetails}>
-        <Text style={styles.cartItemName}>{item.name}</Text>
-        <Text style={styles.cartItemPrice}>${item.price.toFixed(2)}</Text>
+        <Text style={styles.cartItemName}>{item.productName}</Text>
+        <Text style={styles.cartItemPrice}>
+          {item.price.toLocaleString("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          })}
+        </Text>
         <View style={styles.quantityRow}>
           <TouchableOpacity
             style={styles.qtyBtn}
@@ -59,7 +86,9 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
               if (item.quantity > 1) {
                 setCartItems((prev) =>
                   prev.map((p) =>
-                    p.id === item.id ? { ...p, quantity: p.quantity - 1 } : p
+                    p.productVariantId === item.productVariantId
+                      ? { ...p, quantity: p.quantity - 1 }
+                      : p
                   )
                 );
               }
@@ -73,7 +102,9 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
             onPress={() => {
               setCartItems((prev) =>
                 prev.map((p) =>
-                  p.id === item.id ? { ...p, quantity: p.quantity + 1 } : p
+                  p.productVariantId === item.productVariantId
+                    ? { ...p, quantity: p.quantity + 1 }
+                    : p
                 )
               );
             }}
@@ -84,7 +115,7 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
       </View>
       <View style={styles.cartItemActions}>
         <Text style={styles.cartItemSize}>{item.size || "S"}</Text>
-        <TouchableOpacity onPress={() => removeItem(item.id)}>
+        <TouchableOpacity onPress={() => removeItem(item.productVariantId)}>
           <Ionicons name="trash-outline" size={24} color="#FF4D4F" />
         </TouchableOpacity>
       </View>
@@ -96,18 +127,29 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
     <View style={styles.totalsContainer}>
       <View style={styles.totalsRow}>
         <Text style={styles.totalsLabel}>Sub Total</Text>
-        <Text style={styles.totalsValue}>${subTotal.toFixed(2)}</Text>
+        <Text style={styles.totalsValue}>
+          {subTotal.toLocaleString("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          })}
+        </Text>
       </View>
       <View style={styles.totalsRow}>
         <Text style={styles.totalsLabel}>Shipping</Text>
-        <Text style={styles.totalsValue}>${shippingFee.toFixed(2)}</Text>
+        <Text style={styles.totalsValue}>
+          {shippingFee.toLocaleString("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          })}
+        </Text>
       </View>
       <View style={styles.totalsRow}>
-        <Text style={[styles.totalsLabel, { fontWeight: "bold" }]}>
-          Bag Total
-        </Text>
+        <Text style={[styles.totalsLabel, { fontWeight: "bold" }]}>Bag Total</Text>
         <Text style={[styles.totalsValue, { color: "#FF3D00", fontWeight: "bold" }]}>
-          ${bagTotal.toFixed(2)}
+          {bagTotal.toLocaleString("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          })}
         </Text>
       </View>
       {/* Khoảng trống */}
@@ -142,7 +184,7 @@ const CartScreen = ({ cartItems, setCartItems, navigation }) => {
 
       <FlatList
         data={cartItems}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.productVariantId.toString()}
         renderItem={renderCartItem}
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginTop: 20 }}>
@@ -177,17 +219,6 @@ const styles = StyleSheet.create({
   },
   backButton: { marginRight: 10 },
   localHeaderTitle: { fontSize: 20, fontWeight: "bold" },
-  cartIconContainer: { position: "relative" },
-  badge: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: "#FF3D3D",
-    borderRadius: 10,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "bold" },
   cartItemContainer: {
     flexDirection: "row",
     backgroundColor: "#f9f9f9",
@@ -220,14 +251,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 16,
   },
-  totalsRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  totalsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
   totalsLabel: { fontSize: 14, color: "#666" },
   totalsValue: { fontSize: 14, color: "#333" },
   checkoutButton: {
     position: "absolute",
     left: 16,
     right: 16,
-    bottom: 100, // Điều chỉnh nếu cần để tránh tab bar
+    bottom: 100,
     backgroundColor: "#333",
     borderRadius: 8,
     paddingVertical: 14,
@@ -235,5 +270,9 @@ const styles = StyleSheet.create({
     zIndex: 100,
     elevation: 100,
   },
-  checkoutButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  checkoutButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });
