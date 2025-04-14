@@ -12,14 +12,9 @@ import OrderScreen from "./screens/OrderScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import AddressScreen from "./screens/AddressScreen";
 import ProfileInfoScreen from "./screens/ProfileInfoScreen";
+import FavoriteScreen from "./screens/FavoriteScreen";
 
 const Stack = createNativeStackNavigator();
-
-const PlaceholderScreen = ({ title }) => (
-  <View style={styles.placeholderContainer}>
-    <Text style={styles.placeholderText}>{title} Screen</Text>
-  </View>
-);
 
 const TabContent = ({
   activeTab,
@@ -43,7 +38,7 @@ const TabContent = ({
           />
         );
       case "Liked":
-        return <PlaceholderScreen title="Liked" />;
+        return <FavoriteScreen navigation={navigation} />;
       case "Profile":
         return <ProfileScreen navigation={navigation} />;
       default:
@@ -108,7 +103,7 @@ const TabContent = ({
               activeTab === "Liked" && { color: ACTIVE_COLOR, fontWeight: "bold" },
             ]}
           >
-            Liked
+            Yêu thích
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -126,7 +121,7 @@ const TabContent = ({
               activeTab === "Profile" && { color: ACTIVE_COLOR, fontWeight: "bold" },
             ]}
           >
-            Profile
+            Tài khoản
           </Text>
         </TouchableOpacity>
       </View>
@@ -135,7 +130,7 @@ const TabContent = ({
 };
 
 const TabNavigator = ({ route }) => {
-  // Lấy account từ route.params, nếu tồn tại, lấy accountId
+  // Lấy account từ route.params nếu có, nếu không thì tự lấy từ AsyncStorage
   const { account: routeAccount } = route.params || {};
   const [accountId, setAccountId] = useState(
     routeAccount ? routeAccount.accountId : null
@@ -162,7 +157,7 @@ const TabNavigator = ({ route }) => {
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {/* Màn hình chính (TabContent) với bottom tabs */}
+      {/* Màn hình chính (TabContent) */}
       <Stack.Screen name="MainTabs">
         {(props) => (
           <TabContent
@@ -184,7 +179,6 @@ const TabNavigator = ({ route }) => {
           />
         )}
       </Stack.Screen>
-      {/* Thêm màn hình CartScreen để điều hướng trực tiếp */}
       <Stack.Screen name="CartScreen">
         {(props) => (
           <CartScreen

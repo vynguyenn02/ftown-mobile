@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
+  SafeAreaView,
   View,
   Text,
   Image,
@@ -7,14 +8,12 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-// Import Header (sidebar)
 import Header from "../components/Header";
-// Import API service
 import productApi from "../api/productApi";
-// Import cart API service để thêm sản phẩm vào giỏ hàng
 import cartService from "../api/cartApi";
 
 // Hàm định dạng tiền VND
@@ -31,10 +30,10 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
   const [selectedImage, setSelectedImage] = useState(initialProduct.imagePath);
   const [quantity, setQuantity] = useState(1);
   const [showToast, setShowToast] = useState(false);
-  
-  // AccountId state: lấy từ AsyncStorage (nếu không được truyền qua props)
+  const [isFavorite, setIsFavorite] = useState(initialProduct.isFavorite || false);
   const [accountId, setAccountId] = useState(null);
-  
+
+  // Load accountId từ AsyncStorage
   useEffect(() => {
     const loadAccountId = async () => {
       try {
@@ -48,7 +47,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
     };
     loadAccountId();
   }, []);
-  
+
   // Lấy các lựa chọn màu và size từ các variant
   const availableColors = product.variants
     ? Array.from(new Set(product.variants.map((v) => v.color)))
@@ -95,6 +94,10 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
         const response = await productApi.getProductById(product.productId);
         if (response.data && response.data.data) {
           setProduct(response.data.data);
+          // Cập nhật isFavorite nếu backend trả về
+          if (response.data.data.hasOwnProperty("isFavorite")) {
+            setIsFavorite(response.data.data.isFavorite);
+          }
           const newVariant =
             response.data.data.variants &&
             response.data.data.variants.length > 0 &&
@@ -111,6 +114,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
         setLoading(false);
       }
     };
+
     fetchProductDetails();
   }, [product.productId]);
 
@@ -145,20 +149,47 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
   const incrementQty = () => setQuantity((q) => q + 1);
   const decrementQty = () => setQuantity((q) => (q > 1 ? q - 1 : 1));
 
-  // Kiểm tra còn hàng hay không (nếu không có variant được chọn, mặc định cho phép)
+  // Kiểm tra còn hàng hay không
   const inStock = selectedVariant ? selectedVariant.stockQuantity > 0 : true;
+
+  // Hàm xử lý toggle favorite
+  const toggleFavorite = async () => {
+    if (accountId == null) {
+      Alert.alert("Thông báo", "Không tìm thấy thông tin tài khoản, vui lòng đăng nhập lại.");
+      return;
+    }
+    try {
+      if (!isFavorite) {
+        // Gọi API post favorite
+        const response = await productApi.postFavoriteProduct(accountId, product.productId);
+        console.log("Favorite added response:", response.data);
+        if (response.data && response.data.status === true) {
+          setIsFavorite(true);
+        }
+      } else {
+        // Gọi API delete favorite
+        const response = await productApi.deleteFavoriteProduct(accountId, product.productId);
+        console.log("Favorite removed response:", response.data);
+        if (response.data && response.data.status === true) {
+          setIsFavorite(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling favorite", error);
+      Alert.alert("Lỗi", "Có lỗi xảy ra khi thay đổi trạng thái yêu thích.");
+    }
+  };
 
   // Hàm xử lý thêm sản phẩm vào giỏ hàng bằng API
   const handleAddToCart = async () => {
     if (!inStock) return;
-    // Tạo payload theo kiểu AddCartPayload
     const payload = {
       productId: product.productId,
       size: selectedSize || "M",
       color: selectedColor || "#000",
       quantity: quantity,
     };
-  
+
     try {
       if (accountId == null) {
         Alert.alert("Thông báo", "Không tìm thấy thông tin tài khoản, vui lòng đăng nhập lại.");
@@ -166,7 +197,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
       }
       const addResponse = await cartService.addProductToCart(accountId, payload);
       console.log("Add to cart response:", addResponse.data);
-      // Thay vì setCartItems với dữ liệu boolean, gọi lại API getCart để lấy giỏ hàng mới:
+      // Gọi lại API getCart để lấy giỏ hàng mới
       const cartResponse = await cartService.getCart(accountId);
       if (cartResponse.data && cartResponse.data.data) {
         setCartItems(cartResponse.data.data);
@@ -178,7 +209,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
       Alert.alert("Error", "Thêm sản phẩm vào giỏ hàng thất bại.");
     }
   };
-  
+
   // Tính giá dựa trên variant được chọn
   const basePrice = selectedVariant ? selectedVariant.price : product.price;
   const discountedPrice = selectedVariant
@@ -206,8 +237,12 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Details</Text>
         <View style={styles.topBarRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="heart-outline" size={24} color="#000" />
+          <TouchableOpacity style={styles.iconButton} onPress={toggleFavorite}>
+            {isFavorite ? (
+              <Ionicons name="heart" size={24} color="#FF3D3D" />
+            ) : (
+              <Ionicons name="heart-outline" size={24} color="#000" />
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconButton}
