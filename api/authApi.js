@@ -13,20 +13,20 @@ export const login = async (email, password) => {
   try {
     const response = await api.post("/auth/login", { email, password });
 
-    // ✅ BE trả về { data: { token: "...", account: {...} }, status, message }
-    const { data: responseData } = response;
-
+    const responseData = response.data;
     console.log("✅ BACKEND RESPONSE: ", JSON.stringify(responseData));
 
     const token = responseData?.data?.token;
+    const accountId = responseData?.data?.account?.accountId;
 
-    if (!token) {
-      throw new Error("Server trả về token không hợp lệ");
+    if (!token || !accountId) {
+      throw new Error("Thiếu token hoặc accountId từ server");
     }
 
-    return token;
+    return { token, accountId }; // ✅ TRẢ VỀ CẢ 2 GIÁ TRỊ
   } catch (error) {
     console.log("❌ LOGIN ERROR:", error);
     throw error;
   }
 };
+

@@ -24,12 +24,14 @@ const LoginScreen = ({ navigation }) => {
     if (!email || !password) {
       return Alert.alert("Thông báo", "Vui lòng nhập email và mật khẩu.");
     }
-
+  
     setLoading(true);
     try {
-      const token = await login(email, password);
-
+      const { token, accountId } = await login(email, password); // ✅ lấy cả token & accountId
+  
       await AsyncStorage.setItem("userToken", token);
+      await AsyncStorage.setItem("accountId", accountId.toString()); // ✅ cực kỳ quan trọng!
+  
       navigation.replace("HomeScreen");
     } catch (error) {
       console.log("LOGIN ERROR:", error);
@@ -38,6 +40,7 @@ const LoginScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
+  
 
   return (
     <KeyboardAvoidingView
