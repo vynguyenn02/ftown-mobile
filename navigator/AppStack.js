@@ -8,6 +8,9 @@ import RegisterScreen from "../screens/RegisterScreen";
 import ProductDetailScreen from "../screens/ProductDetailScreen";
 import TabNavigator from "../TabNavigator";
 import OrderScreen from "../screens/OrderScreen";
+import AddressScreen from "../screens/AddressScreen"; 
+import CreateAddressScreen from "../screens/CreateAddressScreen";  
+import EditAddressScreen from "../screens/EditAddressScreen"; 
 
 const Stack = createNativeStackNavigator();
 
@@ -18,8 +21,10 @@ const AppStack = () => {
     const checkToken = async () => {
       try {
         const token = await AsyncStorage.getItem("userToken");
+        console.log("Token from storage:", token);
         setInitialRoute(token ? "HomeScreen" : "Login");
       } catch (error) {
+        console.log("Error checking token:", error);
         setInitialRoute("Login");
       }
     };
@@ -36,12 +41,20 @@ const AppStack = () => {
   }
 
   return (
-    <Stack.Navigator initialRouteName={initialRoute} screenOptions={{ gestureEnabled: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="HomeScreen" component={TabNavigator} options={{ headerShown: false }} />
-      <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} options={{ headerShown: false }} />
+    <Stack.Navigator
+      initialRouteName={initialRoute}
+      screenOptions={{ gestureEnabled: false, headerShown: false }}
+    >
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="HomeScreen" component={TabNavigator} />
+      <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
       <Stack.Screen name="OrderScreen" component={OrderScreen} />
+
+      {/* ✅ Màn hình địa chỉ */}
+      <Stack.Screen name="AddressScreen" component={AddressScreen} />
+      <Stack.Screen name="CreateAddressScreen" component={CreateAddressScreen} />
+      <Stack.Screen name="EditAddressScreen" component={EditAddressScreen} />
     </Stack.Navigator>
   );
 };

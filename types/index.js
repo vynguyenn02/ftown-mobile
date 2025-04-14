@@ -43,6 +43,54 @@
  * @property {string} barcode
  * @property {number} weight
  */
+/**
+ * @typedef {Object} ShippingAddress
+ * @property {number} addressId
+ * @property {number} accountId
+ * @property {string} address
+ * @property {string} city
+ * @property {string} province
+ * @property {string} district
+ * @property {string} country
+ * @property {string} recipientName
+ * @property {string} recipientPhone
+ * @property {string} email
+ * @property {boolean} isDefault
+ */
+
+/**
+ * @typedef {Object} CreateShippingAddressRequest
+ * @property {number} accountId
+ * @property {string} address
+ * @property {string} city
+ * @property {string} province
+ * @property {string} district
+ * @property {string} country
+ * @property {string} recipientName
+ * @property {string} recipientPhone
+ * @property {string} email
+ * @property {boolean} isDefault
+ */
+
+/**
+ * @typedef {Object} UpdateShippingAddressRequest
+ * @property {string} address
+ * @property {string} city
+ * @property {string} province
+ * @property {string} district
+ * @property {string} country
+ * @property {string} recipientName
+ * @property {string} recipientPhone
+ * @property {string} email
+ * @property {boolean} isDefault
+ */
+
+/**
+ * @typedef {Object} ShippingAddressListResponse
+ * @property {ShippingAddress[]} data
+ * @property {boolean} status
+ * @property {string} message
+ */
 
 // Bạn không cần export các typedef vì chúng chỉ mang tính chú thích,
 // tuy nhiên bạn có thể export một object rỗng để có một điểm import chung.
