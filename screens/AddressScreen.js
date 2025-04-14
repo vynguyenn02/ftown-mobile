@@ -1,195 +1,258 @@
-// screens/AddressScreen.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
-  TouchableOpacity,
-  StyleSheet,
   FlatList,
-  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons"; 
-import Header from "../components/Header"; // Nếu muốn dùng sidebar
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import addressApi from "../api/addressApi";
 
-const mockAddresses = [
-  {
-    id: "1",
-    name: "Thành Tâm",
-    phone: "0902 234 752",
-    address: "S.101 VinHome Grand Park, Nguyễn Xiển, Phường Long Thạnh Mỹ, Thành phố Thủ Đức, Hồ Chí Minh",
-    label: "Nhà",
-  },
-  {
-    id: "2",
-    name: "Vy",
-    phone: "0387 502 824",
-    address: "203/Q2, Phường Long Bình Tân, Thành phố Biên Hòa, Tỉnh Đồng Nai",
-    label: "Nhà",
-  },
-  {
-    id: "3",
-    name: "Thành Tâm",
-    phone: "0902 234 752",
-    address: "S.203 VinHome Grand Park, Nguyễn Xiển, Phường Long Thạnh Mỹ, Thành phố Thủ Đức, Hồ Chí Minh",
-    label: "Nhà",
-  },
-];
+export default function AddressScreen() {
+  const [addresses, setAddresses] = useState([]);
+  const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
-const AddressScreen = ({ navigation }) => {
-  const [addresses, setAddresses] = useState(mockAddresses);
+  useEffect(() => {
+    fetchAddresses();
+  }, [isFocused]);
 
-  const handleEdit = (id) => {
-    // Logic sửa địa chỉ
-    alert(`Sửa địa chỉ có id: ${id}`);
+  const fetchAddresses = async () => {
+    try {
+      const accountId = await AsyncStorage.getItem("accountId");
+      console.log("📦 accountId:", accountId);
+
+      if (!accountId) {
+        console.log("⚠️ Không tìm thấy accountId trong AsyncStorage");
+        return;
+      }
+
+      const response = await addressApi.getAddressesByAccountId(accountId);
+      console.log("📬 API response:", response.data);
+
+      if (response.data.status) {
+        setAddresses(response.data.data);
+      } else {
+        console.log("❌ API trả về status false");
+      }
+    } catch (error) {
+      console.log("🚨 Lỗi khi lấy danh sách địa chỉ:", error.message || error);
+    }
   };
 
-  const handleDelete = (id) => {
-    // Logic xoá địa chỉ
-    alert(`Xoá địa chỉ có id: ${id}`);
-  };
-
-  const handleAddNew = () => {
-    // Logic thêm địa chỉ mới
-    alert("Thêm địa chỉ mới");
+  const handleDelete = (addressId) => {
+    Alert.alert("Xác nhận", "Bạn có chắc muốn xóa địa chỉ này không?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await addressApi.deleteAddress(addressId);
+            fetchAddresses(); // Reload danh sách
+          } catch (err) {
+            console.log("Lỗi khi xóa địa chỉ:", err.message || err);
+          }
+        },
+      },
+    ]);
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.itemContainer}>
-      {/* Tên + SĐT */}
-      <Text style={styles.namePhone}>
-        {item.name} {"  "} {item.phone}
-      </Text>
-      {/* Địa chỉ */}
-      <Text style={styles.address}>{item.address}</Text>
-      {/* Nhãn địa chỉ */}
-      <View style={styles.labelContainer}>
-        <Text style={styles.labelText}>{item.label}</Text>
+    <View style={styles.card}>
+      <View style={styles.topRow}>
+        <Text style={styles.name}>{item.recipientName}</Text>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("EditAddressScreen", { address: item })
+          }
+        >
+          <Text style={styles.editLink}>Sửa</Text>
+        </TouchableOpacity>
       </View>
-      {/* Sửa / Xoá */}
-      <View style={styles.actionRow}>
-        <TouchableOpacity onPress={() => handleEdit(item.id)}>
-          <Text style={styles.editText}>Sửa</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handleDelete(item.id)}>
-          <Text style={styles.deleteText}>Xoá</Text>
-        </TouchableOpacity>
+  
+      <Text style={styles.phoneAndAddress}>
+        {item.recipientPhone} | {item.address}, {item.district}, {item.province}
+      </Text>
+  
+      {/* Gắn tag nếu có */}
+      <View style={styles.tagRow}>
+        <View style={styles.tag}>
+          <Ionicons name="home-outline" size={14} color="#555" />
+          <Text style={styles.tagText}>Nhà</Text>
+        </View>
+  
+        {item.isDefault && (
+          <View style={[styles.tag, { backgroundColor: "#007BFF1A" }]}>
+            <Ionicons name="checkmark-circle-outline" size={14} color="#007BFF" />
+            <Text style={[styles.tagText, { color: "#007BFF" }]}>Mặc định</Text>
+          </View>
+        )}
       </View>
     </View>
   );
-
+  
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Global Header nếu cần sidebar */}
-      <Header />
-
-      {/* Thanh tiêu đề */}
-      <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Quản lý sổ địa chỉ</Text>
-        {/* Chừa 1 view trống để icon canh giữa (nếu cần) */}
-        <View style={{ width: 24 }} />
-      </View>
-
-      {/* Danh sách địa chỉ */}
+    <View style={styles.container}>
       <FlatList
         data={addresses}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.addressId.toString()}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={
+          <Text style={styles.empty}>Chưa có địa chỉ nào</Text>
+        }
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
-
-      {/* Nút Thêm địa chỉ mới */}
-      <TouchableOpacity style={styles.addButton} onPress={handleAddNew}>
-        <Text style={styles.addButtonText}>Thêm địa chỉ mới</Text>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => navigation.navigate("CreateAddressScreen")}
+      >
+        <Ionicons name="add-circle-outline" size={24} color="#fff" />
+        <Text style={styles.addText}>Thêm địa chỉ mới</Text>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
-};
-
-export default AddressScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-  },
-  headerBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 40,
-    paddingBottom: 10,
-    backgroundColor: "#fff",
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: "center",
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  listContainer: {
     padding: 16,
+    backgroundColor: "#f2f2f2",
   },
-  itemContainer: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 12,
+
+  card: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
     marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
-  namePhone: {
-    fontSize: 15,
+
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+
+  name: {
+    fontSize: 16,
     fontWeight: "600",
-    color: "#333",
-    marginBottom: 4,
-  },
-  address: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 8,
-  },
-  labelContainer: {
-    backgroundColor: "#dcdcdc",
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  labelText: {
-    fontSize: 12,
     color: "#000",
+  },
+
+  editLink: {
+    color: "#007BFF",
+    fontSize: 14,
     fontWeight: "500",
   },
-  actionRow: {
+
+  phoneAndAddress: {
+    fontSize: 14,
+    color: "#444",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+
+  tagRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  tag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F2F2F2",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+
+  tagText: {
+    fontSize: 12,
+    marginLeft: 4,
+    color: "#555",
+  },
+
+  defaultTag: {
+    backgroundColor: "#007BFF1A",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+
+  defaultTagText: {
+    color: "#007BFF",
+    fontSize: 12,
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+
+  actions: {
     flexDirection: "row",
     justifyContent: "flex-start",
-    marginTop: 4,
-    gap: 20,
+    marginTop: 8,
+    gap: 12,
   },
-  editText: {
-    fontSize: 14,
-    color: "#007bff",
-  },
-  deleteText: {
-    fontSize: 14,
-    color: "#FF4D4F",
-  },
-  addButton: {
-    backgroundColor: "#333",
-    paddingVertical: 14,
+
+  actionBtn: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 8,
   },
-  addButtonText: {
+
+  editText: {
+    color: "#007BFF",
+    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  deleteText: {
+    color: "#FF3B30",
+    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  empty: {
+    textAlign: "center",
+    marginTop: 40,
+    color: "#777",
+    fontSize: 16,
+  },
+
+  addButton: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: "#007BFF",
+    paddingVertical: 14,
+    borderRadius: 30,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 4,
+  },
+
+  addText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    marginLeft: 8,
+    fontWeight: "600",
   },
 });
