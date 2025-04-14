@@ -29,12 +29,11 @@ export default function CreateAddressScreen() {
     country: "Việt Nam",
     isDefault: false,
   });
-
+  const [errors, setErrors] = useState({});
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
 
-  // Fetch tỉnh/thành
   useEffect(() => {
     axios.get("https://provinces.open-api.vn/api/p/").then((res) => {
       const options = res.data.map((p) => ({
@@ -46,7 +45,6 @@ export default function CreateAddressScreen() {
     });
   }, []);
 
-  // Fetch quận/huyện khi chọn tỉnh
   useEffect(() => {
     if (form.province) {
       axios
@@ -63,7 +61,6 @@ export default function CreateAddressScreen() {
     }
   }, [form.province]);
 
-  // Fetch xã/phường khi chọn quận
   useEffect(() => {
     if (form.district) {
       axios
@@ -84,13 +81,33 @@ export default function CreateAddressScreen() {
     setForm({ ...form, [key]: value });
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[0-9]{9,15}$/;
+
+    if (!form.recipientName.trim()) newErrors.recipientName = "Vui lòng nhập tên người nhận";
+    if (!form.recipientPhone.trim()) newErrors.recipientPhone = "Vui lòng nhập số điện thoại";
+    else if (!phoneRegex.test(form.recipientPhone)) newErrors.recipientPhone = "Số điện thoại không hợp lệ";
+
+    if (!form.email.trim()) newErrors.email = "Vui lòng nhập email";
+    else if (!emailRegex.test(form.email)) newErrors.email = "Email không hợp lệ";
+
+    if (!form.address.trim()) newErrors.address = "Vui lòng nhập địa chỉ cụ thể";
+    if (!form.province) newErrors.province = "Vui lòng chọn tỉnh/thành";
+    if (!form.district) newErrors.district = "Vui lòng chọn quận/huyện";
+    if (!form.ward) newErrors.ward = "Vui lòng chọn phường/xã";
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async () => {
     const accountId = await AsyncStorage.getItem("accountId");
     if (!accountId) return Alert.alert("Lỗi", "Không tìm thấy tài khoản");
 
-    if (!form.recipientName || !form.recipientPhone || !form.address || !form.ward) {
-      return Alert.alert("Thiếu thông tin", "Vui lòng nhập đầy đủ các trường bắt buộc.");
-    }
+    const isValid = validateForm();
+    if (!isValid) return;
 
     try {
       const selectedProvince = provinces.find((p) => p.value === form.province)?.name;
@@ -105,7 +122,7 @@ export default function CreateAddressScreen() {
         address: form.address,
         province: selectedProvince,
         district: selectedDistrict,
-        city: "", // optional
+        city: selectedWard,
         country: form.country,
         isDefault: form.isDefault,
       };
@@ -123,14 +140,39 @@ export default function CreateAddressScreen() {
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Thêm địa chỉ mới</Text>
 
-      <TextInput style={styles.input} placeholder="Tên người nhận"
-        value={form.recipientName} onChangeText={(text) => handleChange("recipientName", text)} />
-      <TextInput style={styles.input} placeholder="Số điện thoại"
-        value={form.recipientPhone} onChangeText={(text) => handleChange("recipientPhone", text)} keyboardType="phone-pad" />
-      <TextInput style={styles.input} placeholder="Email"
-        value={form.email} onChangeText={(text) => handleChange("email", text)} keyboardType="email-address" />
-      <TextInput style={styles.input} placeholder="Địa chỉ cụ thể"
-        value={form.address} onChangeText={(text) => handleChange("address", text)} />
+      <TextInput
+        style={styles.input}
+        placeholder="Tên người nhận"
+        value={form.recipientName}
+        onChangeText={(text) => handleChange("recipientName", text)}
+      />
+      {errors.recipientName && <Text style={styles.errorText}>{errors.recipientName}</Text>}
+
+      <TextInput
+        style={styles.input}
+        placeholder="Số điện thoại"
+        value={form.recipientPhone}
+        onChangeText={(text) => handleChange("recipientPhone", text)}
+        keyboardType="phone-pad"
+      />
+      {errors.recipientPhone && <Text style={styles.errorText}>{errors.recipientPhone}</Text>}
+
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={form.email}
+        onChangeText={(text) => handleChange("email", text)}
+        keyboardType="email-address"
+      />
+      {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
+      <TextInput
+        style={styles.input}
+        placeholder="Địa chỉ cụ thể"
+        value={form.address}
+        onChangeText={(text) => handleChange("address", text)}
+      />
+      {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
 
       <RNPickerSelect
         placeholder={{ label: "Chọn Tỉnh/Thành", value: null }}
@@ -139,6 +181,7 @@ export default function CreateAddressScreen() {
         value={form.province}
         style={pickerSelectStyles}
       />
+      {errors.province && <Text style={styles.errorText}>{errors.province}</Text>}
 
       <RNPickerSelect
         placeholder={{ label: "Chọn Quận/Huyện", value: null }}
@@ -147,6 +190,7 @@ export default function CreateAddressScreen() {
         value={form.district}
         style={pickerSelectStyles}
       />
+      {errors.district && <Text style={styles.errorText}>{errors.district}</Text>}
 
       <RNPickerSelect
         placeholder={{ label: "Chọn Phường/Xã", value: null }}
@@ -155,6 +199,7 @@ export default function CreateAddressScreen() {
         value={form.ward}
         style={pickerSelectStyles}
       />
+      {errors.ward && <Text style={styles.errorText}>{errors.ward}</Text>}
 
       <View style={styles.switchContainer}>
         <Text style={styles.switchLabel}>Đặt làm địa chỉ mặc định</Text>
@@ -175,7 +220,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 12,
     borderRadius: 8,
-    marginBottom: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: "#ccc",
   },
@@ -201,6 +246,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
+  errorText: {
+    color: "red",
+    fontSize: 13,
+    marginBottom: 8,
+  },
 });
 
 const pickerSelectStyles = {
@@ -212,7 +262,7 @@ const pickerSelectStyles = {
     borderColor: "#ccc",
     borderRadius: 8,
     color: "black",
-    marginBottom: 12,
+    marginBottom: 8,
     backgroundColor: "#fff",
   },
   inputAndroid: {
@@ -223,7 +273,7 @@ const pickerSelectStyles = {
     borderColor: "#ccc",
     borderRadius: 8,
     color: "black",
-    marginBottom: 12,
+    marginBottom: 8,
     backgroundColor: "#fff",
   },
 };

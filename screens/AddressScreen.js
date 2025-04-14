@@ -45,56 +45,72 @@ export default function AddressScreen() {
   };
 
   const handleDelete = (addressId) => {
-    Alert.alert("Xác nhận", "Bạn có chắc muốn xóa địa chỉ này không?", [
-      { text: "Hủy", style: "cancel" },
-      {
-        text: "Xóa",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await addressApi.deleteAddress(addressId);
-            fetchAddresses(); // Reload danh sách
-          } catch (err) {
-            console.log("Lỗi khi xóa địa chỉ:", err.message || err);
-          }
-        },
+  Alert.alert("Xác nhận", "Bạn có chắc muốn xóa địa chỉ này không?", [
+    { text: "Hủy", style: "cancel" },
+    {
+      text: "Xóa",
+      style: "destructive",
+      onPress: async () => {
+        try {
+          await addressApi.deleteAddress(addressId);
+          Alert.alert("Thành công", "Địa chỉ đã được xóa");
+          fetchAddresses();
+        } catch (error) {
+          console.log("🚨 Lỗi khi xóa địa chỉ:", error.response?.data || error.message || error);
+          Alert.alert("Thất bại", "Không thể xóa địa chỉ. Vui lòng thử lại.");
+        }
       },
-    ]);
-  };
+    },
+  ]);
+};
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.topRow}>
-        <Text style={styles.name}>{item.recipientName}</Text>
+
+const renderItem = ({ item }) => (
+  <View style={styles.card}>
+    {/* Dòng trên: Tên + Sửa + Xóa */}
+    <View style={styles.topRow}>
+      <Text style={styles.name}>{item.recipientName}</Text>
+      <View style={styles.actions}>
         <TouchableOpacity
-          onPress={() =>
-            navigation.navigate("EditAddressScreen", { address: item })
-          }
+          onPress={() => navigation.navigate("EditAddressScreen", { address: item })}
+          style={styles.actionBtn}
         >
-          <Text style={styles.editLink}>Sửa</Text>
+          <Ionicons name="pencil" size={16} color="#007BFF" />
+          <Text style={styles.editText}>Sửa</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => handleDelete(item.addressId)}
+          style={styles.actionBtn}
+        >
+          <Ionicons name="trash" size={16} color="#FF3B30" />
+          <Text style={styles.deleteText}>Xóa</Text>
         </TouchableOpacity>
       </View>
-  
-      <Text style={styles.phoneAndAddress}>
-        {item.recipientPhone} | {item.address}, {item.district}, {item.province}
-      </Text>
-  
-      {/* Gắn tag nếu có */}
-      <View style={styles.tagRow}>
-        <View style={styles.tag}>
-          <Ionicons name="home-outline" size={14} color="#555" />
-          <Text style={styles.tagText}>Nhà</Text>
-        </View>
-  
-        {item.isDefault && (
-          <View style={[styles.tag, { backgroundColor: "#007BFF1A" }]}>
-            <Ionicons name="checkmark-circle-outline" size={14} color="#007BFF" />
-            <Text style={[styles.tagText, { color: "#007BFF" }]}>Mặc định</Text>
-          </View>
-        )}
-      </View>
     </View>
-  );
+
+    {/* Dòng địa chỉ */}
+    <Text style={styles.info}>
+      {item.recipientPhone} | {item.address}, {item.city}, {item.district}, {item.province}
+    </Text>
+
+    {/* Tags */}
+    <View style={styles.tagRow}>
+      <View style={styles.tag}>
+        <Ionicons name="home-outline" size={14} color="#555" />
+        <Text style={styles.tagText}>Nhà</Text>
+      </View>
+      {item.isDefault && (
+        <View style={[styles.tag, { backgroundColor: "#007BFF1A" }]}>
+          <Ionicons name="checkmark-circle-outline" size={14} color="#007BFF" />
+          <Text style={[styles.tagText, { color: "#007BFF" }]}>Mặc định</Text>
+        </View>
+      )}
+    </View>
+  </View>
+);
+
+
+  
   
   return (
     <View style={styles.container}>
