@@ -10,11 +10,10 @@ import {
   Dimensions,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
-// Global Header (sidebar)
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import Header from "../components/Header";
-// Import API service đã cấu hình
-import productApi from "../api/productApi";
+import productApi from "../api/productApi"; // Chứa cả postFavoriteProduct & deleteFavoriteProduct
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 36) / 2;
@@ -28,7 +27,6 @@ const categories = [
   { id: "phụ kiện", title: "Phụ kiện" },
 ];
 
-// Hàm định dạng tiền VNĐ
 const formatPrice = (value) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -40,7 +38,7 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Khi selectedCategory thay đổi, gọi API để lấy sản phẩm theo danh mục
+  // Load sản phẩm khi selectedCategory thay đổi
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
@@ -55,7 +53,6 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
             30
           );
         }
-        // Giả sử cấu trúc response.data.data chứa mảng sản phẩm
         if (response.data && response.data.data) {
           setProducts(response.data.data);
         }
@@ -68,6 +65,45 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
     fetchProducts();
   }, [selectedCategory]);
 
+  // Hàm cập nhật trạng thái yêu thích của sản phẩm trong state
+  const updateProductFavorite = (productId, isFavorite) => {
+    setProducts((prevProducts) =>
+      prevProducts.map((p) =>
+        p.productId === productId ? { ...p, isFavorite } : p
+      )
+    );
+  };
+
+  // Hàm gọi API toggling favorite
+  const toggleFavorite = async (product) => {
+    try {
+      // Lấy accountId từ AsyncStorage (giả sử đã được lưu trước đó khi đăng nhập)
+      const storedId = await AsyncStorage.getItem("accountId");
+      if (!storedId) {
+        console.error("Không tìm thấy accountId trong AsyncStorage.");
+        return;
+      }
+      const accountId = parseInt(storedId, 10);
+
+      if (!product.isFavorite) {
+        // Nếu sản phẩm chưa được yêu thích => gọi API POST để thêm vào yêu thích
+        const response = await productApi.postFavoriteProduct(accountId, product.productId);
+        console.log("Favorite added:", response.data);
+        // Cập nhật UI: set isFavorite = true
+        updateProductFavorite(product.productId, true);
+      } else {
+        // Nếu sản phẩm đã được yêu thích => gọi API DELETE để xoá khỏi yêu thích
+        const response = await productApi.deleteFavoriteProduct(accountId, product.productId);
+        console.log("Favorite removed:", response.data);
+        // Cập nhật UI: set isFavorite = false
+        updateProductFavorite(product.productId, false);
+      }
+    } catch (error) {
+      console.error("Error toggling favorite", error);
+    }
+  };
+
+  // Render các sản phẩm dưới dạng card
   const renderProductItem = ({ item }) => {
     const hasDiscount = item.price > item.discountedPrice;
     const discountPercentage = hasDiscount
@@ -78,9 +114,7 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
       <TouchableOpacity
         style={styles.productCard}
         onPress={() =>
-          navigation.navigate("ProductDetailScreen", {
-            product: item,
-          })
+          navigation.navigate("ProductDetailScreen", { product: item })
         }
       >
         <Image
@@ -110,11 +144,21 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
               </View>
             </View>
           ) : (
-            <Text style={styles.productPrice}>{formatPrice(item.price)}</Text>
+            <Text style={styles.productPrice}>
+              {formatPrice(item.price)}
+            </Text>
           )}
         </View>
-        <TouchableOpacity style={styles.wishlistIcon}>
-          <Feather name="heart" size={20} color="#000" />
+        {/* Nút toggling favorite */}
+        <TouchableOpacity
+          style={styles.wishlistIcon}
+          onPress={() => toggleFavorite(item)}
+        >
+          {item.isFavorite ? (
+            <Ionicons name="heart" size={20} color="#FF3D3D" />
+          ) : (
+            <Ionicons name="heart-outline" size={20} color="#000" />
+          )}
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -142,6 +186,14 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
           uri: "https://res.cloudinary.com/dqjtkdldj/image/upload/v1743743707/Frame_2_zy28xh.png",
         }}
         style={styles.bannerImage}
+      />
+      <FlatList
+        data={categories}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        renderItem={renderCategoryItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingHorizontal: 10 }}
       />
     </View>
   );
@@ -176,42 +228,9 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   bannerImage: {
     width: "100%",
-    height: 150, // Bạn có thể điều chỉnh chiều cao của banner
+    height: 150,
     resizeMode: "cover",
   },
-  // Các style cũ (nếu bạn cần cho các phần khác)
-  cartInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 40,
-    paddingBottom: 10,
-    backgroundColor: "#fff",
-  },
-  cartInfoText: { fontSize: 16, fontWeight: "bold", color: "#333" },
-  cartIconWithBadge: { position: "relative" },
-  cartBadge: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: "#FF3D3D",
-    borderRadius: 10,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-  },
-  cartBadgeText: { color: "#fff", fontSize: 10, fontWeight: "bold" },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    margin: 16,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 45,
-  },
-  searchInput: { flex: 1, fontSize: 14 },
-  filterButton: { backgroundColor: "#000", padding: 8, borderRadius: 8 },
   categoryButton: {
     marginRight: 10,
     backgroundColor: "#eee",
