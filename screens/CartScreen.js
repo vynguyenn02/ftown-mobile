@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -7,23 +7,52 @@ import {
   StyleSheet,
   FlatList,
   Image,
-  TextInput,
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-// Import Header (sidebar)
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
-// Import API service cho giỏ hàng
 import cartService from "../api/cartApi";
 
-const CartScreen = ({ accountId, cartItems, setCartItems, navigation }) => {
-  // Khi component mount, gọi API get_cart để lấy thông tin giỏ hàng với accountId được truyền vào
+const CartScreen = ({
+  accountId: propAccountId,
+  cartItems = [],
+  setCartItems,
+  navigation,
+}) => {
+  // Luôn load accountId từ AsyncStorage nếu không được truyền qua prop
+  const [accountId, setAccountId] = useState(propAccountId);
+
+  useEffect(() => {
+    const loadAccountId = async () => {
+      try {
+        const storedAccountId = await AsyncStorage.getItem("accountId");
+        if (storedAccountId) {
+          const id = parseInt(storedAccountId, 10);
+          console.log("Loaded accountId from storage:", id);
+          setAccountId(id);
+        } else {
+          console.log("No accountId found in storage.");
+        }
+      } catch (error) {
+        console.error("Error loading accountId from AsyncStorage", error);
+      }
+    };
+    if (!propAccountId) {
+      loadAccountId();
+    }
+  }, [propAccountId]);
+
+  // Gọi API lấy giỏ hàng khi accountId đã có
   useEffect(() => {
     const fetchCart = async () => {
       try {
-        const response = await cartService.getCart(accountId);
-        if (response.data && response.data.data) {
-          setCartItems(response.data.data);
+        if (accountId != null) {
+          const response = await cartService.getCart(accountId);
+          console.log("Cart response:", response.data);
+          if (response.data && response.data.data) {
+            setCartItems(response.data.data);
+          }
         }
       } catch (error) {
         console.error("Error fetching cart", error);
@@ -35,20 +64,21 @@ const CartScreen = ({ accountId, cartItems, setCartItems, navigation }) => {
     }
   }, [accountId, setCartItems]);
 
-  // Tính tổng tiền chỉ dựa trên những sản phẩm được chọn
-  const subTotal = cartItems.reduce((acc, item) => {
-    // Nếu item.selected === false, bỏ qua; nếu chưa có, xem như true.
-    if (item.selected === false) return acc;
-    return acc + item.price * item.quantity;
-  }, 0);
-  const shippingFee = subTotal > 0 ? 6.0 : 0; // Nếu không có sản phẩm nào được chọn, phí ship = 0
-  const bagTotal = subTotal + shippingFee;
+  // Tính tổng tiền, dùng discountedPrice nếu có giảm giá, không cộng phí ship
+  const subTotal = (Array.isArray(cartItems) ? cartItems : []).reduce(
+    (acc, item) => {
+      if (item.selected === false) return acc;
+      const effectivePrice =
+        item.price > item.discountedPrice ? item.discountedPrice : item.price;
+      return acc + effectivePrice * item.quantity;
+    },
+    0
+  );
 
   const removeItem = (productVariantId) => {
     setCartItems(cartItems.filter((item) => item.productVariantId !== productVariantId));
   };
 
-  // Toggle checkbox của sản phẩm
   const toggleSelect = (productVariantId) => {
     setCartItems((prev) =>
       prev.map((p) =>
@@ -59,131 +89,159 @@ const CartScreen = ({ accountId, cartItems, setCartItems, navigation }) => {
     );
   };
 
-  const renderCartItem = ({ item }) => (
-    <View style={styles.cartItemContainer}>
-      {/* Checkbox */}
-      <TouchableOpacity onPress={() => toggleSelect(item.productVariantId)}>
-        <Ionicons
-          name={item.selected === false ? "checkbox-outline" : "checkbox"}
-          size={20}
-          color="#333"
-        />
-      </TouchableOpacity>
+  const renderCartItem = ({ item }) => {
+    const hasDiscount = item.price > item.discountedPrice;
+    const discountPercentage = hasDiscount
+      ? Math.round(((item.price - item.discountedPrice) / item.price) * 100)
+      : 0;
 
-      <Image source={{ uri: item.imagePath }} style={styles.cartItemImage} />
-      <View style={styles.cartItemDetails}>
-        <Text style={styles.cartItemName}>{item.productName}</Text>
-        <Text style={styles.cartItemPrice}>
-          {item.price.toLocaleString("vi-VN", {
-            style: "currency",
-            currency: "VND",
-          })}
-        </Text>
-        <View style={styles.quantityRow}>
-          <TouchableOpacity
-            style={styles.qtyBtn}
-            onPress={() => {
-              if (item.quantity > 1) {
+    return (
+      <View style={styles.cartItemContainer}>
+        <TouchableOpacity onPress={() => toggleSelect(item.productVariantId)}>
+          <Ionicons
+            name={item.selected === false ? "checkbox-outline" : "checkbox"}
+            size={20}
+            color="#333"
+          />
+        </TouchableOpacity>
+
+        <Image source={{ uri: item.imagePath }} style={styles.cartItemImage} />
+        <View style={styles.cartItemDetails}>
+          <Text style={styles.cartItemName}>{item.productName}</Text>
+          {hasDiscount ? (
+            <View style={styles.priceContainer}>
+              <Text style={styles.discountedPriceText}>
+                {item.discountedPrice.toLocaleString("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                })}
+              </Text>
+              <Text style={styles.originalPriceText}>
+                {item.price.toLocaleString("vi-VN", {
+                  style: "currency",
+                  currency: "VND",
+                })}
+              </Text>
+              <View style={styles.discountBadge}>
+                <Text style={styles.discountText}>-{discountPercentage}%</Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.cartItemPrice}>
+              {item.price.toLocaleString("vi-VN", {
+                style: "currency",
+                currency: "VND",
+              })}
+            </Text>
+          )}
+          <View style={styles.quantityRow}>
+            <TouchableOpacity
+              style={styles.qtyBtn}
+              onPress={() => {
+                if (item.quantity > 1) {
+                  setCartItems((prev) =>
+                    prev.map((p) =>
+                      p.productVariantId === item.productVariantId
+                        ? { ...p, quantity: p.quantity - 1 }
+                        : p
+                    )
+                  );
+                }
+              }}
+            >
+              <Ionicons name="remove" size={16} color="#000" />
+            </TouchableOpacity>
+            <Text style={styles.qtyValue}>{item.quantity}</Text>
+            <TouchableOpacity
+              style={styles.qtyBtn}
+              onPress={() => {
                 setCartItems((prev) =>
                   prev.map((p) =>
                     p.productVariantId === item.productVariantId
-                      ? { ...p, quantity: p.quantity - 1 }
+                      ? { ...p, quantity: p.quantity + 1 }
                       : p
                   )
                 );
-              }
-            }}
-          >
-            <Ionicons name="remove" size={16} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.qtyValue}>{item.quantity}</Text>
-          <TouchableOpacity
-            style={styles.qtyBtn}
-            onPress={() => {
-              setCartItems((prev) =>
-                prev.map((p) =>
-                  p.productVariantId === item.productVariantId
-                    ? { ...p, quantity: p.quantity + 1 }
-                    : p
-                )
-              );
-            }}
-          >
-            <Ionicons name="add" size={16} color="#000" />
+              }}
+            >
+              <Ionicons name="add" size={16} color="#000" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={styles.cartItemActions}>
+          <Text style={styles.cartItemSize}>{item.size || "S"}</Text>
+          <TouchableOpacity onPress={() => removeItem(item.productVariantId)}>
+            <Ionicons name="trash-outline" size={24} color="#FF4D4F" />
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.cartItemActions}>
-        <Text style={styles.cartItemSize}>{item.size || "S"}</Text>
-        <TouchableOpacity onPress={() => removeItem(item.productVariantId)}>
-          <Ionicons name="trash-outline" size={24} color="#FF4D4F" />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  // Footer hiển thị Totals
-  const renderFooter = () => (
-    <View style={styles.totalsContainer}>
-      <View style={styles.totalsRow}>
-        <Text style={styles.totalsLabel}>Sub Total</Text>
-        <Text style={styles.totalsValue}>
-          {subTotal.toLocaleString("vi-VN", {
-            style: "currency",
-            currency: "VND",
-          })}
-        </Text>
-      </View>
-      <View style={styles.totalsRow}>
-        <Text style={styles.totalsLabel}>Shipping</Text>
-        <Text style={styles.totalsValue}>
-          {shippingFee.toLocaleString("vi-VN", {
-            style: "currency",
-            currency: "VND",
-          })}
-        </Text>
-      </View>
-      <View style={styles.totalsRow}>
-        <Text style={[styles.totalsLabel, { fontWeight: "bold" }]}>Bag Total</Text>
-        <Text style={[styles.totalsValue, { color: "#FF3D00", fontWeight: "bold" }]}>
-          {bagTotal.toLocaleString("vi-VN", {
-            style: "currency",
-            currency: "VND",
-          })}
-        </Text>
-      </View>
-      {/* Khoảng trống */}
-      <View style={{ height: 80 }} />
-    </View>
-  );
-
-  const handleCheckout = () => {
-    navigation.navigate("CheckoutScreen");
+    );
   };
 
-  const handleBackToProduct = () => {
-    if (cartItems.length > 0) {
-      navigation.navigate("ProductDetailScreen", { product: cartItems[0] });
-    } else {
-      navigation.goBack();
+  // Hàm xử lý Proceed to Checkout: Gọi API checkout với payload theo CheckoutRequest
+  const handleCheckout = async () => {
+    // Lấy tất cả sản phẩm được chọn
+    const selectedItems = (Array.isArray(cartItems) ? cartItems : []).filter(
+      (item) => item.selected !== false
+    );
+
+    if (selectedItems.length === 0) {
+      Alert.alert("Thông báo", "Vui lòng chọn ít nhất một sản phẩm.");
+      return;
+    }
+
+    const payload = {
+      accountId: accountId,
+      selectedProductVariantIds: selectedItems.map(
+        (item) => item.productVariantId
+      ),
+    };
+
+    try {
+      const response = await cartService.checkout(payload);
+      console.log("Checkout response:", response.data);
+      // Kiểm tra dựa trên BE response: nếu có checkOutSessionId thì thành công
+      if (response.data && response.data.checkOutSessionId) {
+        navigation.navigate("CheckoutScreen", {
+          checkoutData: response.data,
+        });
+      } else {
+        Alert.alert("Lỗi", "Checkout thất bại, vui lòng thử lại sau.");
+      }
+    } catch (error) {
+      console.error("Error during checkout", error);
+      Alert.alert("Lỗi", "Có lỗi xảy ra trong quá trình thanh toán.");
     }
   };
 
-  return (
-    <SafeAreaView style={[styles.container, { position: "relative" }]}>
-      {/* Global Header (sidebar) */}
-      <Header />
-
-      {/* Local Header cho CartScreen */}
-      <View style={styles.localHeader}>
-        <TouchableOpacity onPress={handleBackToProduct} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.localHeaderTitle}>Shopping Bag</Text>
+  // FlatList Footer: hiển thị tổng tiền và nút Proceed to Checkout (lấy subTotal từ discountedPrice nếu có)
+  const renderFooter = () => (
+    <View style={styles.footerContainer}>
+      <View style={styles.totalsContainer}>
+        <View style={styles.totalsRow}>
+          <Text style={styles.totalsLabel}>Sub Total</Text>
+          <Text style={styles.totalsValue}>
+            {subTotal.toLocaleString("vi-VN", {
+              style: "currency",
+              currency: "VND",
+            })}
+          </Text>
+        </View>
       </View>
+      <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
+        <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
+  return (
+    <SafeAreaView style={styles.container}>
+      <Header />
+      <View style={styles.localHeader}>
+        <Text style={styles.localHeaderTitle}>Giỏ hàng</Text>
+      </View>
       <FlatList
-        data={cartItems}
+        data={Array.isArray(cartItems) ? cartItems : []}
         keyExtractor={(item) => item.productVariantId.toString()}
         renderItem={renderCartItem}
         ListEmptyComponent={
@@ -192,13 +250,8 @@ const CartScreen = ({ accountId, cartItems, setCartItems, navigation }) => {
           </View>
         }
         ListFooterComponent={renderFooter}
-        contentContainerStyle={{ paddingHorizontal: 0 }}
+        contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 140 }}
       />
-
-      {/* Nút Proceed to Checkout */}
-      <TouchableOpacity style={styles.checkoutButton} onPress={handleCheckout}>
-        <Text style={styles.checkoutButtonText}>Proceed to Checkout</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -207,7 +260,6 @@ export default CartScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  // Local header (CartScreen)
   localHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -217,7 +269,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     backgroundColor: "#fff",
   },
-  backButton: { marginRight: 10 },
   localHeaderTitle: { fontSize: 20, fontWeight: "bold" },
   cartItemContainer: {
     flexDirection: "row",
@@ -231,9 +282,25 @@ const styles = StyleSheet.create({
   cartItemDetails: { flex: 1 },
   cartItemName: { fontSize: 16, fontWeight: "600" },
   cartItemPrice: { fontSize: 14, color: "#666", marginVertical: 4 },
+  priceContainer: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  discountedPriceText: { fontSize: 16, fontWeight: "bold", color: "#FC7B54" },
+  originalPriceText: {
+    fontSize: 12,
+    color: "#888",
+    textDecorationLine: "line-through",
+    marginLeft: 6,
+  },
+  discountBadge: {
+    backgroundColor: "#FF3D3D",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  discountText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
   quantityRow: { flexDirection: "row", alignItems: "center" },
-  qtyBtn: { backgroundColor: "#ddd", borderRadius: 4, padding: 4 },
-  qtyValue: { marginHorizontal: 8, fontSize: 14 },
+  qtyBtn: { backgroundColor: "#f0f0f0", borderRadius: 6, padding: 6 },
+  qtyValue: { marginHorizontal: 12, fontSize: 16, fontWeight: "600" },
   cartItemActions: {
     alignItems: "flex-end",
     justifyContent: "space-between",
@@ -246,33 +313,18 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     fontSize: 12,
   },
-  totalsContainer: {
-    marginTop: 16,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  totalsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
+  totalsContainer: { marginTop: 16, marginBottom: 16, paddingHorizontal: 16 },
+  totalsRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   totalsLabel: { fontSize: 14, color: "#666" },
   totalsValue: { fontSize: 14, color: "#333" },
+  footerContainer: { paddingBottom: 20 },
   checkoutButton: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 100,
     backgroundColor: "#333",
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: "center",
-    zIndex: 100,
-    elevation: 100,
+    marginHorizontal: 16,
+    marginTop: 10,
   },
-  checkoutButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  checkoutButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });
