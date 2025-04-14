@@ -9,16 +9,20 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 // Import Header (sidebar)
 import Header from "../components/Header";
 // Import API service
 import productApi from "../api/productApi";
+// Import cart API service để thêm sản phẩm vào giỏ hàng
+import cartService from "../api/cartApi";
 
 // Hàm định dạng tiền VND
 const formatVND = (value) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-    value
-  );
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(value);
 
 const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => {
   const { product: initialProduct } = route.params;
@@ -27,7 +31,24 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
   const [selectedImage, setSelectedImage] = useState(initialProduct.imagePath);
   const [quantity, setQuantity] = useState(1);
   const [showToast, setShowToast] = useState(false);
-
+  
+  // AccountId state: lấy từ AsyncStorage (nếu không được truyền qua props)
+  const [accountId, setAccountId] = useState(null);
+  
+  useEffect(() => {
+    const loadAccountId = async () => {
+      try {
+        const storedId = await AsyncStorage.getItem("accountId");
+        if (storedId) {
+          setAccountId(parseInt(storedId, 10));
+        }
+      } catch (error) {
+        console.error("Error loading accountId from storage", error);
+      }
+    };
+    loadAccountId();
+  }, []);
+  
   // Lấy các lựa chọn màu và size từ các variant
   const availableColors = product.variants
     ? Array.from(new Set(product.variants.map((v) => v.color)))
@@ -74,7 +95,6 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
         const response = await productApi.getProductById(product.productId);
         if (response.data && response.data.data) {
           setProduct(response.data.data);
-          // Nếu backend trả về các variants mới, cập nhật lựa chọn mặc định nếu chưa có
           const newVariant =
             response.data.data.variants &&
             response.data.data.variants.length > 0 &&
@@ -91,21 +111,18 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
         setLoading(false);
       }
     };
-
     fetchProductDetails();
   }, [product.productId]);
 
   // Hàm xử lý khi chọn màu
   const handleColorSelect = (color) => {
     setSelectedColor(color);
-    // Tìm variant với màu mới và size hiện tại
     const variant = product.variants.find(
       (v) => v.color === color && v.size === selectedSize
     );
     if (variant) {
       setSelectedImage(variant.imagePath);
     } else {
-      // Nếu không có variant khớp, chuyển sang variant đầu tiên với màu đó
       const variantAny = product.variants.find((v) => v.color === color);
       if (variantAny) {
         setSelectedImage(variantAny.imagePath);
@@ -131,33 +148,37 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
   // Kiểm tra còn hàng hay không (nếu không có variant được chọn, mặc định cho phép)
   const inStock = selectedVariant ? selectedVariant.stockQuantity > 0 : true;
 
-  const handleAddToCart = () => {
+  // Hàm xử lý thêm sản phẩm vào giỏ hàng bằng API
+  const handleAddToCart = async () => {
     if (!inStock) return;
-    const existingIndex = cartItems.findIndex(
-      (item) => item.id === product.productId
-    );
-    if (existingIndex >= 0) {
-      setCartItems((prev) => {
-        const updated = [...prev];
-        updated[existingIndex].quantity += quantity;
-        return updated;
-      });
-    } else {
-      const newItem = {
-        id: product.productId,
-        name: product.name,
-        price: selectedVariant ? selectedVariant.price : product.price,
-        image: { uri: selectedImage },
-        quantity: quantity,
-        size: selectedSize || "M",
-        color: selectedColor || "#000",
-      };
-      setCartItems((prev) => [...prev, newItem]);
+    // Tạo payload theo kiểu AddCartPayload
+    const payload = {
+      productId: product.productId,
+      size: selectedSize || "M",
+      color: selectedColor || "#000",
+      quantity: quantity,
+    };
+  
+    try {
+      if (accountId == null) {
+        Alert.alert("Thông báo", "Không tìm thấy thông tin tài khoản, vui lòng đăng nhập lại.");
+        return;
+      }
+      const addResponse = await cartService.addProductToCart(accountId, payload);
+      console.log("Add to cart response:", addResponse.data);
+      // Thay vì setCartItems với dữ liệu boolean, gọi lại API getCart để lấy giỏ hàng mới:
+      const cartResponse = await cartService.getCart(accountId);
+      if (cartResponse.data && cartResponse.data.data) {
+        setCartItems(cartResponse.data.data);
+      }
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2000);
+    } catch (error) {
+      console.error("Error adding product to cart", error);
+      Alert.alert("Error", "Thêm sản phẩm vào giỏ hàng thất bại.");
     }
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
   };
-
+  
   // Tính giá dựa trên variant được chọn
   const basePrice = selectedVariant ? selectedVariant.price : product.price;
   const discountedPrice = selectedVariant
@@ -178,10 +199,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
 
   return (
     <View style={styles.container}>
-      {/* Global Header (Sidebar) */}
       <Header />
-
-      {/* Local Top Bar */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={28} color="#000" />
@@ -199,11 +217,8 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
           </TouchableOpacity>
         </View>
       </View>
-
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Image Section */}
         <View style={styles.imageSection}>
-          {/* Thumbnails hiển thị ảnh variant theo màu */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -221,11 +236,8 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
               />
             ))}
           </ScrollView>
-          {/* Ảnh chính hiển thị theo variant đã chọn */}
           <Image source={{ uri: selectedImage }} style={styles.mainImage} />
         </View>
-
-        {/* Details Section */}
         <View style={styles.detailsContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.productName}>{product.name}</Text>
@@ -236,7 +248,6 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
               </Text>
             </View>
           </View>
-          {/* Hiển thị giá và badge giảm giá */}
           <View style={styles.priceRow}>
             <Text style={styles.priceText}>
               {formatVND(discountedPrice)}
@@ -247,14 +258,11 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
               </View>
             )}
           </View>
-          {/* Hiển thị giá gốc */}
           {discountPercentage > 0 && (
             <Text style={styles.originalPriceText}>
               {formatVND(basePrice)}
             </Text>
           )}
-
-          {/* Color Options (hiển thị các size theo màu đã chọn) */}
           <Text style={styles.sectionLabel}>Size</Text>
           <View style={styles.sizeContainer}>
             {availableSizes.map((size) => (
@@ -277,7 +285,6 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
               </TouchableOpacity>
             ))}
           </View>
-
           <View style={styles.quantityRow}>
             <TouchableOpacity onPress={decrementQty} style={styles.qtyBtn}>
               <Ionicons name="remove" size={20} color="#000" />
@@ -287,21 +294,15 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
               <Ionicons name="add" size={20} color="#000" />
             </TouchableOpacity>
           </View>
-
           <Text style={styles.description}>
             {product.description ||
               "This is a simple and elegant piece perfect for those who want minimalist clothes."}
           </Text>
         </View>
       </ScrollView>
-
-      {/* Footer với nút Add to Cart hoặc Out of Stock nếu không có hàng */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[
-            styles.addToCartButton,
-            !inStock && styles.outOfStockButton,
-          ]}
+          style={[styles.addToCartButton, !inStock && styles.outOfStockButton]}
           onPress={handleAddToCart}
           disabled={!inStock}
         >
@@ -310,8 +311,6 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* Toast Message */}
       {showToast && (
         <View style={styles.toastContainer}>
           <Text style={styles.toastText}>Product added to cart!</Text>
@@ -326,7 +325,6 @@ export default ProductDetailScreen;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  // Local Top Bar
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -406,7 +404,6 @@ const styles = StyleSheet.create({
     elevation: 100,
   },
   toastText: { color: "#fff", fontSize: 14, fontWeight: "bold" },
-  // Style cho lựa chọn màu: dùng chính cho thumbnail màu
   colorCircle: {
     width: 30,
     height: 30,
