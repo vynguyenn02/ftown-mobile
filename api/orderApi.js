@@ -5,6 +5,8 @@ export const END_POINT = {
   GET_ORDERS: "/orders",
   CREATE_ORDER: "/orders",
   ORDER_DETAIL: (orderId) => `/orders/${orderId}/details`,
+  GET_ORDERS_RETURNREQUEST: "/return-requests/order-items",
+
 };
 
 const orderApi = {
@@ -32,6 +34,17 @@ const orderApi = {
       throw err;
     }
   },
+
+  /**
+   * Lấy danh sách mặt hàng trả hàng theo orderId và accountId.
+   * @param {number} accountId - ID của tài khoản.
+   * @param {number} orderId - ID của đơn hàng.
+   * @returns {Promise} Promise trả về response theo GetReturnItemResponse.
+   */
+  getOrdersReturnRequest(accountId, orderId) {
+    const url = `${END_POINT.GET_ORDERS_RETURNREQUEST}?orderId=${orderId}&accountId=${accountId}`;
+    return get(url);
+  }
 };
 
 export default orderApi;
