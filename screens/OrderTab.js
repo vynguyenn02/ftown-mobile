@@ -46,8 +46,12 @@ export default function OrderTab({ status }) {
     return (
       <TouchableOpacity onPress={() => navigation.navigate("OrderDetailScreen", { orderId: item.orderId })}>
         <View style={styles.card}>
-          <Text style={styles.orderId}>Đơn hàng #{item.orderId}</Text>
-
+          <View style={styles.headerRow}>
+            <Text style={styles.orderId}>Đơn hàng #{item.orderId}</Text>
+            <Text style={[styles.statusBadge, getStatusColorStyle(item.status)]}>
+              {translateStatus(item.status)}
+            </Text>
+          </View>
           {item.items.map((detail, idx) => (
             <View key={idx} style={styles.itemRow}>
               {detail.imageUrl && (
@@ -80,7 +84,40 @@ export default function OrderTab({ status }) {
       </TouchableOpacity>
     );
   };
-
+  const getStatusColorStyle = (status) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return { backgroundColor: "#e0f8ec", color: "#1aa260" };
+      case "shipped":
+        return { backgroundColor: "#e3f2fd", color: "#2196f3" };
+      case "pending confirmed":
+        return { backgroundColor: "#fff9c4", color: "#f9a825" };
+      case "canceled":
+        return { backgroundColor: "#fdecea", color: "#d32f2f" };
+      case "confirmed":
+        return { backgroundColor: "#f3e5f5", color: "#7b1fa2" };
+      default:
+        return { backgroundColor: "#eee", color: "#555" };
+    }
+  };
+  const translateStatus = (status) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return "Hoàn thành";
+      case "shipped":
+        return "Đã giao";
+      case "pending confirmed":
+        return "Chờ xác nhận";
+      case "pendingpayment":
+        return "Chờ thanh toán";
+      case "confirmed":
+        return "Đã xác nhận";
+      case "canceled":
+        return "Đã huỷ";
+      default:
+        return status;
+    }
+  };
   return loading ? (
     <ActivityIndicator size="large" color="#FF3B30" style={{ marginTop: 20 }} />
   ) : (
@@ -159,5 +196,19 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 14,
     color: "#000",
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: "bold",
+    textTransform: "capitalize",
   },
 });

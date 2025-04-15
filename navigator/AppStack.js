@@ -12,6 +12,8 @@ import AddressScreen from "../screens/AddressScreen";
 import CreateAddressScreen from "../screens/CreateAddressScreen";  
 import EditAddressScreen from "../screens/EditAddressScreen"; 
 import OrderDetailScreen from "../screens/OrderDetailScreen";
+import CheckoutScreen from "../screens/CheckoutScreen";
+import SelectAddressScreen from "../screens/SelectAddressScreen";
 const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
@@ -49,6 +51,8 @@ const AppStack = () => {
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="HomeScreen" component={TabNavigator} />
       <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
+      <Stack.Screen name="CheckoutScreen" component={CheckoutScreen} />
+      <Stack.Screen name="SelectAddressScreen" component={SelectAddressScreen} />
       <Stack.Screen name="OrderScreen" component={OrderScreen} />
       <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
       {/* ✅ Màn hình địa chỉ */}

@@ -1,5 +1,5 @@
-// screens/CheckoutScreen.js
-import React from "react";
+// ✅ CheckoutScreen.js - xử lý tạo đơn hàng và redirect PAYOS nếu cần, giao diện được phục hồi về kiểu khối chia rõ như ban đầu
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -7,14 +7,36 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import orderApi from "../api/orderApi";
+import * as WebBrowser from "expo-web-browser";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CheckoutScreen = ({ route, navigation }) => {
-  // Lấy dữ liệu checkout trả về từ route.params.checkoutData
-  const { checkoutData } = route.params || {};
-  
-  // Nếu checkoutData không tồn tại, hiển thị thông báo
+  const { checkoutData, selectedAddress } = route.params || {};
+  const [shippingAddress, setShippingAddress] = useState(() => selectedAddress || checkoutData?.shippingAddresses?.find(addr => addr.isDefault) || null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("COD");
+  const [accountId, setAccountId] = useState(null);
+
+  useEffect(() => {
+    if (route.params?.selectedAddress) {
+      setShippingAddress(route.params.selectedAddress);
+    }
+  }, [route.params?.selectedAddress]);
+
+  useEffect(() => {
+    const fetchAccountId = async () => {
+      const storedId = await AsyncStorage.getItem("accountId");
+      if (storedId) {
+        setAccountId(parseInt(storedId));
+      }
+    };
+    fetchAccountId();
+  }, []);
+
   if (!checkoutData) {
     return (
       <SafeAreaView style={styles.container}>
@@ -22,138 +44,138 @@ const CheckoutScreen = ({ route, navigation }) => {
       </SafeAreaView>
     );
   }
-  
-  // Destructure các trường cần hiển thị từ checkoutData
-  const {
-    subTotal,
-    shippingCost,
-    availablePaymentMethods,
-    shippingAddresses,
-    shippingAddress,
-    items,
-  } = checkoutData;
-  
-  // Hàm xử lý quay lại
-  const handleBack = () => {
-    navigation.goBack();
+
+  const handleSelectAddress = () => {
+    navigation.navigate("SelectAddressScreen", {
+      addresses: checkoutData.shippingAddresses,
+      checkoutData,
+      selectedAddress: shippingAddress,
+      accountId,
+    });
   };
-  
-  // Hàm xử lý thanh toán (tùy chỉnh)
-  const handlePay = () => {
-    alert("Thanh toán thành công!");
+
+  const handlePay = async () => {
+    if (!shippingAddress) {
+      Alert.alert("Chưa chọn địa chỉ", "Vui lòng chọn địa chỉ giao hàng.");
+      return;
+    }
+
+    if (!accountId) {
+      Alert.alert("Thiếu thông tin", "Không tìm thấy tài khoản. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    try {
+      console.log("🧑 accountId truyền lên:", accountId);
+      const payload = {
+        accountId: accountId,
+        checkOutSessionId: checkoutData.checkOutSessionId,
+        shippingAddressId: shippingAddress.addressId,
+        paymentMethod: selectedPaymentMethod,
+      };
+
+      const response = await orderApi.createOrder(payload);
+      if (response.data.status) {
+        const order = response.data.data;
+
+        if (order.paymentMethod === "PAYOS" && order.paymentUrl) {
+          await WebBrowser.openBrowserAsync(order.paymentUrl);
+        } else {
+          navigation.navigate("OrderScreen", { status: "Pending Confirmed" });
+        }
+      } else {
+        Alert.alert("Lỗi", response.data.message);
+      }
+    } catch (err) {
+      console.error("Tạo đơn hàng lỗi:", err?.response?.data || err.message);
+      Alert.alert("Lỗi", err?.response?.data?.message || "Không thể tạo đơn hàng");
+    }
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Xác nhận đơn hàng</Text>
-        <View style={styles.cartIconContainer}>
-          <Ionicons name="cart-outline" size={24} color="#000" />
-        </View>
+        <Ionicons name="cart-outline" size={24} color="#000" />
       </View>
-      
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Hiển thị thông tin thanh toán */}
-        <Text style={styles.sectionTitle}>Thông tin thanh toán</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Tổng tiền:</Text>
-          <Text style={styles.value}>
-            {subTotal?.toLocaleString("vi-VN", {
-              style: "currency",
-              currency: "VND",
-            })}
-          </Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Phí vận chuyển:</Text>
-          <Text style={styles.value}>
-            {shippingCost?.toLocaleString("vi-VN", {
-              style: "currency",
-              currency: "VND",
-            })}
-          </Text>
-        </View>
-        
-        <View style={styles.infoRow}>
-          <Text style={styles.label}>Phương thức thanh toán:</Text>
-          <Text style={styles.value}>
-            {availablePaymentMethods ? availablePaymentMethods.join(", ") : ""}
-          </Text>
-        </View>
-        
-        {/* Shipping Addresses */}
-        <Text style={styles.sectionTitle}>Danh sách địa chỉ giao hàng</Text>
-        {shippingAddresses && shippingAddresses.length > 0 ? (
-          shippingAddresses.map((addr) => (
-            <View key={addr.addressId} style={styles.addressContainer}>
-              <Text style={styles.addressText}>
-                {addr.address}, {addr.city}, {addr.district}, {addr.province}, {addr.country}
-              </Text>
-              <Text style={styles.addressText}>
-                Người nhận: {addr.recipientName} - {addr.recipientPhone}
-              </Text>
-              <Text style={styles.addressText}>Email: {addr.email}</Text>
-              {addr.isDefault && <Text style={styles.defaultAddress}>Mặc định</Text>}
-            </View>
-          ))
-        ) : (
-          <Text style={styles.value}>Không có địa chỉ nào.</Text>
-        )}
-        
-        {/* Shipping Address được chọn */}
-        <Text style={styles.sectionTitle}>Địa chỉ giao hàng được chọn</Text>
-        {shippingAddress ? (
-          <View style={styles.addressContainer}>
-            <Text style={styles.addressText}>
-              {shippingAddress.address}, {shippingAddress.city}, {shippingAddress.district}, {shippingAddress.province}, {shippingAddress.country}
-            </Text>
-            <Text style={styles.addressText}>
-              Người nhận: {shippingAddress.recipientName} - {shippingAddress.recipientPhone}
-            </Text>
-            <Text style={styles.addressText}>Email: {shippingAddress.email}</Text>
-          </View>
-        ) : (
-          <Text style={styles.value}>Không có địa chỉ giao hàng được chọn.</Text>
-        )}
-        
-        {/* Danh sách sản phẩm */}
-        <Text style={styles.sectionTitle}>Danh sách sản phẩm</Text>
-        {items && items.length > 0 ? (
-          items.map((item) => (
+        <View style={styles.blockSection}>
+          <Text style={styles.sectionTitle}>Danh sách sản phẩm</Text>
+          {checkoutData.items.map((item) => (
             <View key={item.productVariantId} style={styles.productItem}>
               <Text style={styles.productName}>{item.productName}</Text>
-              <Text style={styles.productDetail}>
-                Size: {item.size} | Color: {item.color}
-              </Text>
-              <Text style={styles.productDetail}>
-                Số lượng: {item.quantity}
-              </Text>
-              <Text style={styles.productDetail}>
-                Giá gốc: {item.price?.toLocaleString("vi-VN", {
-                  style: "currency",
-                  currency: "VND",
-                })}
-              </Text>
-              {item.discountApplied > 0 && (
-                <Text style={styles.productDetail}>
-                  Giá mua: {item.priceAtPurchase?.toLocaleString("vi-VN", {
-                    style: "currency",
-                    currency: "VND",
-                  })} (-{item.discountApplied?.toLocaleString("vi-VN", {style: "currency", currency: "VND"})})
-                </Text>
-              )}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {item.imageUrl && (
+                  <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.productDetail}>Size: {item.size}</Text>
+                  <View style={styles.colorRow}>
+                    <Text style={styles.productDetail}>Color: </Text>
+                    <View style={[styles.colorCircle, { backgroundColor: item.color || '#ccc' }]} />
+                  </View>
+                  <Text style={styles.productDetail}>Số lượng: {item.quantity}</Text>
+                  <Text style={styles.productDetail}>Giá mua: {item.priceAtPurchase.toLocaleString("vi-VN")} ₫</Text>
+                </View>
+              </View>
             </View>
-          ))
-        ) : (
-          <Text style={styles.value}>Không có sản phẩm nào.</Text>
-        )}
+          ))}
+        </View>
+
+        <View style={styles.blockSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
+            <TouchableOpacity onPress={handleSelectAddress}>
+              <Text style={styles.changeText}>Thay đổi</Text>
+            </TouchableOpacity>
+          </View>
+          {shippingAddress ? (
+            <View style={styles.addressContainer}>
+              <Text style={styles.addressText}>{shippingAddress.address}, {shippingAddress.city}, {shippingAddress.district}, {shippingAddress.province}, {shippingAddress.country}</Text>
+              <Text style={styles.addressText}>Người nhận: {shippingAddress.recipientName} - {shippingAddress.recipientPhone}</Text>
+              <Text style={styles.addressText}>Email: {shippingAddress.email}</Text>
+            </View>
+          ) : (
+            <Text style={styles.value}>Không có địa chỉ được chọn.</Text>
+          )}
+        </View>
+
+        <View style={styles.blockSection}>
+          <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
+          <View style={{ flexDirection: "row", marginBottom: 12 }}>
+            {checkoutData.availablePaymentMethods.map((method) => (
+              <TouchableOpacity
+                key={method}
+                style={[styles.methodButton, selectedPaymentMethod === method && styles.methodButtonActive]}
+                onPress={() => setSelectedPaymentMethod(method)}
+              >
+                <Text style={{ color: selectedPaymentMethod === method ? "#fff" : "#000" }}>{method}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.blockSection}>
+          <Text style={styles.sectionTitle}>Thông tin thanh toán</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Tổng tiền sản phẩm:</Text>
+            <Text style={styles.value}>{checkoutData.subTotal.toLocaleString("vi-VN")} ₫</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Phí vận chuyển:</Text>
+            <Text style={styles.value}>{checkoutData.shippingCost.toLocaleString("vi-VN")} ₫</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Tổng cộng:</Text>
+            <Text style={styles.total}>{(checkoutData.subTotal + checkoutData.shippingCost).toLocaleString("vi-VN")} ₫</Text>
+          </View>
+        </View>
       </ScrollView>
-      
-      {/* Nút Thanh Toán */}
+
       <TouchableOpacity style={styles.payButton} onPress={handlePay}>
         <Text style={styles.payButtonText}>Thanh Toán</Text>
       </TouchableOpacity>
@@ -172,39 +194,91 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#ccc",
   },
   backButton: { paddingRight: 10 },
   headerTitle: { fontSize: 18, fontWeight: "bold" },
-  cartIconContainer: { position: "relative" },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", marginVertical: 10 },
+  blockSection: {
+    backgroundColor: "#f9f9f9",
+    padding: 14,
+    borderRadius: 10,
+    marginVertical: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  changeText: { color: "#007bff" },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 6,
   },
   label: { fontSize: 14, color: "#333" },
-  value: { fontSize: 14, color: "#333" },
+  value: { fontSize: 14, color: "#444" },
+  total: { fontSize: 15, color: "#000", fontWeight: "bold" },
   addressContainer: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#fff",
     padding: 10,
     borderRadius: 8,
-    marginBottom: 10,
+    marginTop: 8,
   },
   addressText: { fontSize: 14, color: "#333", marginBottom: 4 },
-  defaultAddress: { fontSize: 12, color: "#FF3D3D" },
-  productItem: {
-    backgroundColor: "#f9f9f9",
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
+  methodButton: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 10,
+    borderRadius: 6,
   },
-  productName: { fontSize: 14, fontWeight: "600", marginBottom: 4, color: "#333" },
-  productDetail: { fontSize: 13, color: "#666", marginBottom: 2 },
+  methodButtonActive: {
+    backgroundColor: "#000",
+    borderColor: "#000",
+  },
+  productItem: {
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  productName: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 4 },
+  productDetail: { fontSize: 13, color: "#666", marginTop: 2 },
+  productImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  colorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  colorCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    marginLeft: 4,
+    borderWidth: 1,
+    borderColor: "#aaa",
+  },
   payButton: {
-    backgroundColor: "#333",
+    backgroundColor: "#000",
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: "center",

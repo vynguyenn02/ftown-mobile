@@ -37,6 +37,46 @@ export default function OrderDetailScreen() {
     }
   };
 
+  // Hàm dịch trạng thái sang tiếng Việt
+  const translateStatus = (status) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return "Hoàn thành";
+      case "shipped":
+        return "Đã giao";
+      case "pending confirmed":
+        return "Chờ xác nhận";
+      case "pendingpayment":
+        return "Chờ thanh toán";
+      case "confirmed":
+        return "Đã xác nhận";
+      case "canceled":
+        return "Đã huỷ";
+      default:
+        return status;
+    }
+  };
+
+  // Badge màu theo trạng thái
+  const getStatusColorStyle = (status) => {
+    switch (status?.toLowerCase()) {
+      case "completed":
+        return { backgroundColor: "#e0f8ec", color: "#1aa260" };
+      case "shipped":
+        return { backgroundColor: "#e3f2fd", color: "#2196f3" };
+      case "pending confirmed":
+        return { backgroundColor: "#fff9c4", color: "#f9a825" };
+      case "pendingpayment":
+        return { backgroundColor: "#fff4e5", color: "#f57c00" };
+      case "confirmed":
+        return { backgroundColor: "#f3e5f5", color: "#7b1fa2" };
+      case "canceled":
+        return { backgroundColor: "#fdecea", color: "#d32f2f" };
+      default:
+        return { backgroundColor: "#eee", color: "#555" };
+    }
+  };
+
   if (loading) {
     return <ActivityIndicator style={{ marginTop: 20 }} size="large" color="#FF3B30" />;
   }
@@ -113,10 +153,25 @@ export default function OrderDetailScreen() {
         <Text style={styles.total}>
           Tổng cộng: {(order.orderTotal + order.shippingCost).toLocaleString()}đ
         </Text>
-        <Text style={styles.meta}>Trạng thái: {order.status}</Text>
+        
+        {/* Trạng thái hiển thị đẹp */}
+        <View style={[styles.statusBadge, getStatusColorStyle(order.status)]}>
+          <Text style={styles.statusText}>{translateStatus(order.status)}</Text>
+        </View>
+
         <Text style={styles.meta}>
           Ngày tạo: {new Date(order.createdDate).toLocaleString()}
         </Text>
+      </View>
+
+      {/* Nút hành động */}
+      <View style={styles.buttonRow}>
+        <TouchableOpacity style={styles.blackButton} onPress={() => navigation.navigate("ReviewScreen", { orderId: order.orderId })}>
+          <Text style={styles.blackButtonText}>Đánh giá</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.whiteButton} onPress={() => navigation.navigate("ReturnRequestScreen", { orderId: order.orderId })}>
+          <Text style={styles.whiteButtonText}>Đổi/Trả</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -206,5 +261,48 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#000",
     marginTop: 8,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 30,
+    gap: 10,
+  },
+  blackButton: {
+    flex: 1,
+    backgroundColor: "#000",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  blackButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  whiteButton: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#000",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  whiteButtonText: {
+    color: "#000",
+    fontWeight: "bold",
+  },
+  statusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: "bold",
+    textTransform: "capitalize",
   },
 });
