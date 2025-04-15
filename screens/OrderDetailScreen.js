@@ -1,3 +1,4 @@
+// OrderDetailScreen.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -7,10 +8,12 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import orderApi from "../api/orderApi";
 import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import orderApi from "../api/orderApi"; // This module should export getOrdersReturnRequest as described
 
 export default function OrderDetailScreen() {
   const route = useRoute();
@@ -19,6 +22,22 @@ export default function OrderDetailScreen() {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accountId, setAccountId] = useState(null);
+
+  useEffect(() => {
+    // Load accountId from AsyncStorage
+    const loadAccountId = async () => {
+      try {
+        const storedId = await AsyncStorage.getItem("accountId");
+        if (storedId) {
+          setAccountId(parseInt(storedId, 10));
+        }
+      } catch (error) {
+        console.error("Error loading accountId:", error);
+      }
+    };
+    loadAccountId();
+  }, []);
 
   useEffect(() => {
     fetchOrderDetail();
@@ -37,7 +56,7 @@ export default function OrderDetailScreen() {
     }
   };
 
-  // Hàm dịch trạng thái sang tiếng Việt
+  // Function to translate order status to Vietnamese (as before)
   const translateStatus = (status) => {
     switch (status?.toLowerCase()) {
       case "completed":
@@ -57,7 +76,7 @@ export default function OrderDetailScreen() {
     }
   };
 
-  // Badge màu theo trạng thái
+  // Function to get style for status badge
   const getStatusColorStyle = (status) => {
     switch (status?.toLowerCase()) {
       case "completed":
@@ -77,8 +96,31 @@ export default function OrderDetailScreen() {
     }
   };
 
+  // Handler for "Đánh giá" button.
+  const handleFeedback = async () => {
+    if (!accountId) {
+      Alert.alert("Thông báo", "Không tìm thấy thông tin tài khoản.");
+      return;
+    }
+    try {
+      const response = await orderApi.getOrdersReturnRequest(accountId, orderId);
+      console.log("Order return request response:", response.data);
+      if (response.data && response.data.data) {
+        // Navigate to FeedbackScreen, passing orderId and returnData from response
+        navigation.navigate("FeedbackScreen", { orderId, returnData: response.data.data });
+      } else {
+        Alert.alert("Lỗi", "Không tìm thấy dữ liệu yêu cầu đổi/trả cho đơn hàng này.");
+      }
+    } catch (error) {
+      console.error("Error fetching return request:", error);
+      Alert.alert("Lỗi", "Không thể lấy dữ liệu yêu cầu đổi/trả, vui lòng thử lại sau.");
+    }
+  };
+
   if (loading) {
-    return <ActivityIndicator style={{ marginTop: 20 }} size="large" color="#FF3B30" />;
+    return (
+      <ActivityIndicator style={{ marginTop: 20 }} size="large" color="#FF3B30" />
+    );
   }
 
   if (!order) {
@@ -129,10 +171,14 @@ export default function OrderDetailScreen() {
               <Text style={styles.meta}>Size: {item.size}</Text>
               <View style={styles.colorRow}>
                 <Text style={styles.meta}>Màu:</Text>
-                <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+                <View
+                  style={[styles.colorDot, { backgroundColor: item.color }]}
+                />
               </View>
               <Text style={styles.meta}>Số lượng: {item.quantity}</Text>
-              <Text style={styles.meta}>Giá: {item.priceAtPurchase.toLocaleString()}đ</Text>
+              <Text style={styles.meta}>
+                Giá: {item.priceAtPurchase.toLocaleString()}đ
+              </Text>
               {item.discountApplied > 0 && (
                 <Text style={styles.meta}>
                   Đã giảm: {item.discountApplied.toLocaleString()}đ
@@ -146,30 +192,35 @@ export default function OrderDetailScreen() {
       {/* Tổng kết đơn */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Tổng kết</Text>
-        <Text style={styles.meta}>Phương thức thanh toán: {order.paymentMethod}</Text>
+        <Text style={styles.meta}>
+          Phương thức thanh toán: {order.paymentMethod}
+        </Text>
         <Text style={styles.meta}>
           Phí vận chuyển: {order.shippingCost.toLocaleString()}đ
         </Text>
         <Text style={styles.total}>
           Tổng cộng: {(order.orderTotal + order.shippingCost).toLocaleString()}đ
         </Text>
-        
-        {/* Trạng thái hiển thị đẹp */}
         <View style={[styles.statusBadge, getStatusColorStyle(order.status)]}>
           <Text style={styles.statusText}>{translateStatus(order.status)}</Text>
         </View>
-
         <Text style={styles.meta}>
           Ngày tạo: {new Date(order.createdDate).toLocaleString()}
         </Text>
       </View>
 
-      {/* Nút hành động */}
+      {/* Action Buttons */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.blackButton} onPress={() => navigation.navigate("ReviewScreen", { orderId: order.orderId })}>
+        {/* Updated button: on press, calls handleFeedback to send API and then navigate */}
+        <TouchableOpacity style={styles.blackButton} onPress={handleFeedback}>
           <Text style={styles.blackButtonText}>Đánh giá</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.whiteButton} onPress={() => navigation.navigate("ReturnRequestScreen", { orderId: order.orderId })}>
+        <TouchableOpacity
+          style={styles.whiteButton}
+          onPress={() =>
+            navigation.navigate("ReturnRequestScreen", { orderId: order.orderId })
+          }
+        >
           <Text style={styles.whiteButtonText}>Đổi/Trả</Text>
         </TouchableOpacity>
       </View>
@@ -306,3 +357,24 @@ const styles = StyleSheet.create({
     textTransform: "capitalize",
   },
 });
+
+function translateStatus(status) {
+  switch (status?.toLowerCase()) {
+    case "completed":
+      return "Hoàn thành";
+    case "shipped":
+      return "Đã giao";
+    case "pending confirmed":
+      return "Chờ xác nhận";
+    case "pendingpayment":
+      return "Chờ thanh toán";
+    case "confirmed":
+      return "Đã xác nhận";
+    case "canceled":
+      return "Đã huỷ";
+    default:
+      return status;
+  }
+}
+
+export { translateStatus };
