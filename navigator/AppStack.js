@@ -11,7 +11,7 @@ import OrderScreen from "../screens/OrderScreen";
 import AddressScreen from "../screens/AddressScreen"; 
 import CreateAddressScreen from "../screens/CreateAddressScreen";  
 import EditAddressScreen from "../screens/EditAddressScreen"; 
-
+import OrderDetailScreen from "../screens/OrderDetailScreen";
 const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
@@ -50,7 +50,7 @@ const AppStack = () => {
       <Stack.Screen name="HomeScreen" component={TabNavigator} />
       <Stack.Screen name="ProductDetailScreen" component={ProductDetailScreen} />
       <Stack.Screen name="OrderScreen" component={OrderScreen} />
-
+      <Stack.Screen name="OrderDetailScreen" component={OrderDetailScreen} />
       {/* ✅ Màn hình địa chỉ */}
       <Stack.Screen name="AddressScreen" component={AddressScreen} />
       <Stack.Screen name="CreateAddressScreen" component={CreateAddressScreen} />
