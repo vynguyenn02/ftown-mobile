@@ -6,13 +6,16 @@ import {
   ActivityIndicator,
   StyleSheet,
   Image,
+  TouchableOpacity,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import orderApi from "../api/orderApi.js";
 
 export default function OrderTab({ status }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
 
   useEffect(() => {
     fetchOrders();
@@ -41,38 +44,40 @@ export default function OrderTab({ status }) {
     const total = (item.subTotal || 0) + (item.shippingCost || 0);
 
     return (
-      <View style={styles.card}>
-        <Text style={styles.orderId}>Đơn hàng #{item.orderId}</Text>
+      <TouchableOpacity onPress={() => navigation.navigate("OrderDetailScreen", { orderId: item.orderId })}>
+        <View style={styles.card}>
+          <Text style={styles.orderId}>Đơn hàng #{item.orderId}</Text>
 
-        {item.items.map((detail, idx) => (
-          <View key={idx} style={styles.itemRow}>
-            {detail.imageUrl && (
-              <Image source={{ uri: detail.imageUrl }} style={styles.image} />
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.productName}>{detail.productName || "Sản phẩm"}</Text>
-              <View style={styles.colorRow}>
-                <Text style={styles.meta}>Size: {detail.size || "N/A"}</Text>
-                <View style={styles.colorWrap}>
-                  <Text style={styles.meta}>Màu: </Text>
-                  <ColorDot color={detail.color} />
+          {item.items.map((detail, idx) => (
+            <View key={idx} style={styles.itemRow}>
+              {detail.imageUrl && (
+                <Image source={{ uri: detail.imageUrl }} style={styles.image} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.productName}>{detail.productName || "Sản phẩm"}</Text>
+                <View style={styles.colorRow}>
+                  <Text style={styles.meta}>Size: {detail.size || "N/A"}</Text>
+                  <View style={styles.colorWrap}>
+                    <Text style={styles.meta}>Màu:</Text>
+                    <ColorDot color={detail.color} />
+                  </View>
                 </View>
+                <Text style={styles.meta}>Số lượng: {detail.quantity}</Text>
+                <Text style={styles.meta}>
+                  Giá: {(detail.priceAtPurchase || 0).toLocaleString()}đ
+                </Text>
               </View>
-              <Text style={styles.meta}>Số lượng: {detail.quantity}</Text>
-              <Text style={styles.meta}>
-                Giá: {(detail.priceAtPurchase || 0).toLocaleString()}đ
-              </Text>
             </View>
-          </View>
-        ))}
+          ))}
 
-        <Text style={styles.meta}>
-          Phí vận chuyển: {(item.shippingCost || 0).toLocaleString()}đ
-        </Text>
-        <Text style={styles.total}>
-          Tổng số tiền: {total.toLocaleString()}đ
-        </Text>
-      </View>
+          <Text style={styles.meta}>
+            Phí vận chuyển: {(item.shippingCost || 0).toLocaleString()}đ
+          </Text>
+          <Text style={styles.total}>
+            Tổng số tiền: {total.toLocaleString()}đ
+          </Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -84,7 +89,11 @@ export default function OrderTab({ status }) {
       keyExtractor={(item) => item.orderId.toString()}
       renderItem={renderItem}
       contentContainerStyle={{ padding: 16 }}
-      ListEmptyComponent={<Text style={{ textAlign: "center" }}>Không có đơn nào.</Text>}
+      ListEmptyComponent={
+        <Text style={{ textAlign: "center", marginTop: 20 }}>
+          Không có đơn nào.
+        </Text>
+      }
     />
   );
 }

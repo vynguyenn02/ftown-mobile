@@ -9,6 +9,8 @@ const orderApi = {
     const query = `?status=${encodeURIComponent(status)}&accountId=${accountId}`;
     return get(`${END_POINT.GET_ORDERS}${query}`);
   },
+  getOrderDetail: (orderId) =>
+    get(`/orders/${orderId}/details`),
 };
 
 export default orderApi;
