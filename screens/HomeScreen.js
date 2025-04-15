@@ -1,3 +1,4 @@
+// HomeScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -6,19 +7,17 @@ import {
   StyleSheet,
   FlatList,
   Image,
-  TextInput,
   Dimensions,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, Feather } from "@expo/vector-icons";
 import Header from "../components/Header";
-import productApi from "../api/productApi"; // Chứa cả postFavoriteProduct & deleteFavoriteProduct
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import productApi from "../api/productApi";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 36) / 2;
 
-// Các danh mục sản phẩm: "Tất cả", "Áo", "Quần", "Áo khoác", "Phụ kiện"
+// Danh mục sản phẩm
 const categories = [
   { id: "all", title: "Tất cả" },
   { id: "áo", title: "Áo" },
@@ -27,6 +26,7 @@ const categories = [
   { id: "phụ kiện", title: "Phụ kiện" },
 ];
 
+// Hàm định dạng giá theo VNĐ
 const formatPrice = (value) =>
   new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -38,7 +38,7 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load sản phẩm khi selectedCategory thay đổi
+  // Khi selectedCategory thay đổi, load sản phẩm tương ứng
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
@@ -65,51 +65,27 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
     fetchProducts();
   }, [selectedCategory]);
 
-  // Hàm cập nhật trạng thái yêu thích của sản phẩm trong state
-  const updateProductFavorite = (productId, isFavorite) => {
-    setProducts((prevProducts) =>
-      prevProducts.map((p) =>
-        p.productId === productId ? { ...p, isFavorite } : p
-      )
+  // Render từng mục trong danh mục (category)
+  const renderCategoryItem = ({ item }) => {
+    const isActive = item.id === selectedCategory;
+    return (
+      <TouchableOpacity
+        style={[styles.categoryButton, isActive && { backgroundColor: "#000" }]}
+        onPress={() => setSelectedCategory(item.id)}
+      >
+        <Text style={[styles.categoryText, isActive && { color: "#fff" }]}>
+          {item.title}
+        </Text>
+      </TouchableOpacity>
     );
   };
 
-  // Hàm gọi API toggling favorite
-  const toggleFavorite = async (product) => {
-    try {
-      // Lấy accountId từ AsyncStorage (giả sử đã được lưu trước đó khi đăng nhập)
-      const storedId = await AsyncStorage.getItem("accountId");
-      if (!storedId) {
-        console.error("Không tìm thấy accountId trong AsyncStorage.");
-        return;
-      }
-      const accountId = parseInt(storedId, 10);
-
-      if (!product.isFavorite) {
-        // Nếu sản phẩm chưa được yêu thích => gọi API POST để thêm vào yêu thích
-        const response = await productApi.postFavoriteProduct(accountId, product.productId);
-        console.log("Favorite added:", response.data);
-        // Cập nhật UI: set isFavorite = true
-        updateProductFavorite(product.productId, true);
-      } else {
-        // Nếu sản phẩm đã được yêu thích => gọi API DELETE để xoá khỏi yêu thích
-        const response = await productApi.deleteFavoriteProduct(accountId, product.productId);
-        console.log("Favorite removed:", response.data);
-        // Cập nhật UI: set isFavorite = false
-        updateProductFavorite(product.productId, false);
-      }
-    } catch (error) {
-      console.error("Error toggling favorite", error);
-    }
-  };
-
-  // Render các sản phẩm dưới dạng card
+  // Render từng card sản phẩm
   const renderProductItem = ({ item }) => {
     const hasDiscount = item.price > item.discountedPrice;
     const discountPercentage = hasDiscount
       ? Math.round(((item.price - item.discountedPrice) / item.price) * 100)
       : 0;
-
     return (
       <TouchableOpacity
         style={styles.productCard}
@@ -149,52 +125,29 @@ const HomeScreen = ({ navigation, cartItems = [] }) => {
             </Text>
           )}
         </View>
-        {/* Nút toggling favorite */}
-        <TouchableOpacity
-          style={styles.wishlistIcon}
-          onPress={() => toggleFavorite(item)}
-        >
-          {item.isFavorite ? (
-            <Ionicons name="heart" size={20} color="#FF3D3D" />
-          ) : (
-            <Ionicons name="heart-outline" size={20} color="#000" />
-          )}
-        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
 
-  const renderCategoryItem = ({ item }) => {
-    const isActive = item.id === selectedCategory;
-    return (
-      <TouchableOpacity
-        style={[styles.categoryButton, isActive && { backgroundColor: "#000" }]}
-        onPress={() => setSelectedCategory(item.id)}
-      >
-        <Text style={[styles.categoryText, isActive && { color: "#fff" }]}>
-          {item.title}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  // Thay đổi ListHeader thành banner
+  // ListHeader bao gồm banner và danh mục sản phẩm (category)
   const ListHeader = () => (
-    <View style={{ marginBottom: 10 }}>
+    <View style={styles.listHeaderContainer}>
       <Image
         source={{
           uri: "https://res.cloudinary.com/dqjtkdldj/image/upload/v1743743707/Frame_2_zy28xh.png",
         }}
         style={styles.bannerImage}
       />
-      <FlatList
-        data={categories}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        renderItem={renderCategoryItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingHorizontal: 10 }}
-      />
+      <View style={styles.categoryContainer}>
+        <FlatList
+          data={categories}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          renderItem={renderCategoryItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.categoryListContent}
+        />
+      </View>
     </View>
   );
 
@@ -231,6 +184,9 @@ const styles = StyleSheet.create({
     height: 150,
     resizeMode: "cover",
   },
+  listHeaderContainer: { marginBottom: 10 },
+  categoryContainer: { marginTop: 10, marginBottom: 10 },
+  categoryListContent: { paddingHorizontal: 10 },
   categoryButton: {
     marginRight: 10,
     backgroundColor: "#eee",
@@ -269,12 +225,4 @@ const styles = StyleSheet.create({
   },
   discountText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
   productPrice: { fontSize: 14, fontWeight: "bold", color: "#000" },
-  wishlistIcon: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "#fff",
-    padding: 6,
-    borderRadius: 20,
-  },
 });
