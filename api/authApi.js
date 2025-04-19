@@ -29,5 +29,19 @@ export const login = async (email, password) => {
     throw error;
   }
 };
-
+export const register = async ({ username, email, password }) => {
+  try {
+    const response = await api.post("/auth/register", {
+      username,
+      email,
+      password,
+      isActive: true, // Mặc định luôn true
+    });
+    console.log("✅ REGISTER SUCCESS:", response.data);
+    return response.data;
+  } catch (error) {
+    console.log("❌ REGISTER ERROR:", error.response?.data || error.message);
+    throw error;
+  }
+};
 

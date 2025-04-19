@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -8,18 +8,36 @@ import {
   Dimensions,
   Pressable,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native"; // 1) Import hook
-import { MaterialIcons, FontAwesome, Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import profileApi from "../api/profileApi";
+import { ThemeContext } from "../context/ThemeContext";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
 const Header = () => {
-  // 2) Lấy navigation bằng hook
   const navigation = useNavigation();
-
+  const { theme } = useContext(ThemeContext);
   const [isSidebarVisible, setSidebarVisible] = useState(false);
+  const [profile, setProfile] = useState(null);
   const slideAnim = useRef(new Animated.Value(SCREEN_WIDTH)).current;
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const accountId = await AsyncStorage.getItem("accountId");
+        if (accountId) {
+          const res = await profileApi.getProfile(accountId);
+          setProfile(res.data);
+        }
+      } catch (err) {
+        console.error("Lỗi lấy thông tin khách hàng:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const openSidebar = () => {
     setSidebarVisible(true);
@@ -38,66 +56,95 @@ const Header = () => {
     }).start(() => setSidebarVisible(false));
   };
 
+  const handleLogout = async () => {
+    await AsyncStorage.multiRemove(["userToken", "accountId"]);
+    navigation.replace("Login");
+  };
+
   return (
     <>
-      {/* Thanh tiêu đề */}
-      <View style={styles.header}>
-        <Text style={styles.logo}>FUNKYTOWN</Text>
+      <View style={[styles.header, { backgroundColor: theme.background }]}>        
+        <Text style={[styles.logo, { color: theme.text }]}>FUNKYTOWN</Text>
         <TouchableOpacity onPress={openSidebar}>
-          <MaterialIcons name="menu" size={24} color="black" />
+          <MaterialIcons name="menu" size={24} color={theme.text} />
         </TouchableOpacity>
       </View>
 
-      {/* Sidebar */}
       {isSidebarVisible && (
         <View style={styles.overlay}>
           <Pressable style={styles.overlayTouchable} onPress={closeSidebar} />
           <Animated.View
-            style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}
+            style={[
+              styles.sidebar,
+              { backgroundColor: theme.card, transform: [{ translateX: slideAnim }] },
+            ]}
           >
             <TouchableOpacity style={styles.closeButton} onPress={closeSidebar}>
-              <MaterialIcons name="close" size={24} color="black" />
+              <MaterialIcons name="close" size={24} color={theme.text} />
             </TouchableOpacity>
 
-            {/* User Info */}
             <View style={styles.userInfo}>
-              <Text style={styles.userWelcome}>Welcome,</Text>
-              <Text style={styles.userName}>Justin Nainggolan ▼</Text>
+              <Text style={[styles.userWelcome, { color: theme.subtext }]}>Xin chào,</Text>
+              <Text style={[styles.userName, { color: theme.text }]}>              
+                {profile?.fullName || "Người dùng"} ▼
+              </Text>
             </View>
 
-            {/* Sidebar Menu */}
             <TouchableOpacity
               style={styles.menuItem}
-              // 3) Gọi navigation.navigate("OrderScreen")
               onPress={() => navigation.navigate("OrderScreen")}
             >
-              <FontAwesome name="shopping-bag" size={20} color="black" />
-              <Text style={styles.menuText}>MY ORDER</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>5</Text>
+              <FontAwesome name="shopping-bag" size={20} color={theme.text} />
+              <Text style={[styles.menuText, { color: theme.text }]}>Đơn hàng</Text>
+              <View style={[styles.badge, { backgroundColor: theme.primary }]}>                
+                <Text style={[styles.badgeText, { color: theme.text }]}>5</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem}>
-              <FontAwesome name="heart" size={20} color="black" />
-              <Text style={styles.menuText}>WISHLIST</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>11</Text>
+              <FontAwesome name="heart" size={20} color={theme.text} />
+              <Text style={[styles.menuText, { color: theme.text }]}>Yêu thích</Text>
+              <View style={[styles.badge, { backgroundColor: theme.primary }]}>                
+                <Text style={[styles.badgeText, { color: theme.text }]}>11</Text>
               </View>
             </TouchableOpacity>
 
-            {/* Bottom Buttons */}
             <View style={styles.bottomButtons}>
-              <TouchableOpacity style={styles.bottomButton}>
-                <Text style={styles.bottomButtonText}>About</Text>
+              <TouchableOpacity
+                style={[styles.bottomButton, { borderColor: theme.border }]}
+              >
+                <Text
+                  style={[styles.bottomButtonText, { color: theme.text }]}
+                >
+                  Giới thiệu
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.bottomButton}>
-                <Text style={styles.bottomButtonText}>FAQ</Text>
+              <TouchableOpacity
+                style={[styles.bottomButton, { borderColor: theme.border }]}
+              >
+                <Text
+                  style={[styles.bottomButtonText, { color: theme.text }]}
+                >
+                  FAQ
+                </Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.customerServiceButton}>
-              <Text style={styles.customerServiceText}>Customer Service</Text>
+            <TouchableOpacity
+              style={[styles.customerServiceButton, { backgroundColor: theme.primary }]}
+            >
+              <Text
+                style={[styles.customerServiceText, { color: theme.text }]}
+              >
+                Liên hệ hỗ trợ
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.logoutButton, { backgroundColor: theme.primary }]}
+              onPress={handleLogout}
+            >
+              <Text style={[styles.logoutText, { color: theme.text }]}>Đăng xuất</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -119,7 +166,6 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#412C2C",
   },
   overlay: {
     position: "absolute",
@@ -137,7 +183,6 @@ const styles = StyleSheet.create({
   sidebar: {
     width: "75%",
     height: "100%",
-    backgroundColor: "#fff",
     paddingVertical: 20,
     paddingHorizontal: 20,
     zIndex: 11,
@@ -151,7 +196,6 @@ const styles = StyleSheet.create({
   },
   userWelcome: {
     fontSize: 14,
-    color: "#777",
   },
   userName: {
     fontSize: 16,
@@ -170,14 +214,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   badge: {
-    backgroundColor: "#f39c12",
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   badgeText: {
     fontSize: 12,
-    color: "white",
     fontWeight: "bold",
   },
   bottomButtons: {
@@ -187,7 +229,6 @@ const styles = StyleSheet.create({
   },
   bottomButton: {
     borderWidth: 1,
-    borderColor: "#000",
     paddingVertical: 5,
     paddingHorizontal: 15,
     borderRadius: 5,
@@ -197,7 +238,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   customerServiceButton: {
-    backgroundColor: "#412C2C",
     paddingVertical: 10,
     marginTop: 15,
     alignItems: "center",
@@ -205,7 +245,16 @@ const styles = StyleSheet.create({
   },
   customerServiceText: {
     fontSize: 16,
-    color: "white",
+    fontWeight: "bold",
+  },
+  logoutButton: {
+    paddingVertical: 10,
+    marginTop: 15,
+    alignItems: "center",
+    borderRadius: 5,
+  },
+  logoutText: {
+    fontSize: 16,
     fontWeight: "bold",
   },
 });

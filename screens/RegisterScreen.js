@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useContext } from "react";
 import {
   View,
   Text,
@@ -11,78 +11,145 @@ import {
   Platform,
   SafeAreaView,
 } from "react-native";
-import { FontAwesome, Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { register as registerApi } from "../api/authApi";
+import { ThemeContext } from "../context/ThemeContext";
 
 const RegisterScreen = ({ navigation }) => {
-  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [focusField, setFocusField] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { theme, toggleTheme } = useContext(ThemeContext);
+
+  const isValidEmail = (e) => /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(e);
+
+  const formValid = useMemo(() => {
+    return (
+      email.length > 0 &&
+      isValidEmail(email) &&
+      username.length > 0 &&
+      password.length >= 6 &&
+      password === confirmPassword
+    );
+  }, [email, username, password, confirmPassword]);
 
   const handleRegister = async () => {
-    if (!fullName || !username || !password || !confirmPassword) {
-      Alert.alert("Registration Error", "Please fill in all fields.");
-      return;
-    }
-  
-    if (password !== confirmPassword) {
-      Alert.alert("Registration Error", "Passwords do not match.");
-      return;
-    }
-  
+    if (!formValid) return;
     setIsLoading(true);
-  
     try {
-      // Store user data in AsyncStorage
-      await AsyncStorage.setItem("userEmail", username);
-      await AsyncStorage.setItem("userPassword", password);
-  
-      setIsLoading(false);
-      Alert.alert("Registration Successful", `Welcome, ${username}!`);
+      await registerApi({ username, email, password });
+      Alert.alert("Thành công", "Đăng ký tài khoản thành công!");
       navigation.replace("Login");
-    } catch (error) {
+    } catch (err) {
+      Alert.alert("Lỗi", "Đăng ký thất bại, thử lại sau.");
+    } finally {
       setIsLoading(false);
-      Alert.alert("Registration Failed", "An error occurred. Try again.");
     }
   };
-  
+
+  const getInputStyle = (field) => [
+    styles.input,
+    { backgroundColor: theme.input, color: theme.text },
+    focusField === field && { borderColor: theme.text },
+  ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        <Text style={styles.logo}>FUNKYTOWN</Text>
-        <Text style={styles.registerText}>REGISTER TO CONTINUE</Text>
-        <View style={styles.inputContainer}>
-        <TextInput style={styles.input} placeholder="Full Name" value={fullName} onChangeText={setFullName} autoCapitalize="words" />
-        </View>
-
-        <View style={styles.inputContainer}>
-        <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} autoCapitalize="none" />
-        </View>
-
-        <View style={styles.passwordContainer}>
-          <TextInput style={styles.passwordInput} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="black" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.passwordContainer}>
-          <TextInput style={styles.passwordInput} placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry={!showPassword} />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="black" />
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-          <Text style={styles.registerButtonText}>Register</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}> 
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardView}
+      >
+        <TouchableOpacity onPress={toggleTheme} style={styles.themeToggleIcon}>
+          <Ionicons
+            name={theme.mode === "dark" ? "sunny-outline" : "moon-outline"}
+            size={24}
+            color={theme.text}
+          />
         </TouchableOpacity>
 
-        <Text style={styles.alreadyText}>Already have an account? <Text style={styles.loginNow} onPress={() => navigation.navigate("Login")}>Login now</Text></Text>
+        <Text style={[styles.logo, { color: theme.text }]}>FUNKYTOWN</Text>
+        <Text style={[styles.title, { color: theme.text }]}>TẠO TÀI KHOẢN MỚI</Text>
 
-        {isLoading && <ActivityIndicator size="large" color="#000" />}
+        <TextInput
+          style={getInputStyle("email")}
+          placeholder="Email"
+          placeholderTextColor="#999"
+          value={email}
+          onChangeText={setEmail}
+          onFocus={() => setFocusField("email")}
+          onBlur={() => setFocusField(null)}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+
+        <TextInput
+          style={getInputStyle("username")}
+          placeholder="Tên đăng nhập"
+          placeholderTextColor="#999"
+          value={username}
+          onChangeText={setUsername}
+          onFocus={() => setFocusField("username")}
+          onBlur={() => setFocusField(null)}
+          autoCapitalize="none"
+        />
+
+        <View style={[styles.passwordContainer, { backgroundColor: theme.input }]}> 
+          <TextInput
+            style={[styles.passwordInput, { color: theme.text }]}
+            placeholder="Mật khẩu"
+            placeholderTextColor="#999"
+            value={password}
+            onChangeText={setPassword}
+            onFocus={() => setFocusField("password")}
+            onBlur={() => setFocusField(null)}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.passwordContainer, { backgroundColor: theme.input }]}> 
+          <TextInput
+            style={[styles.passwordInput, { color: theme.text }]}
+            placeholder="Xác nhận mật khẩu"
+            placeholderTextColor="#999"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            onFocus={() => setFocusField("confirm")}
+            onBlur={() => setFocusField(null)}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Feather name={showPassword ? "eye" : "eye-off"} size={20} color="#999" />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: theme.primary }, (!formValid || isLoading) && styles.buttonDisabled]}
+          onPress={handleRegister}
+          disabled={!formValid || isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={theme.mode === "dark" ? "#000" : "#fff"} />
+          ) : (
+            <Text style={[styles.buttonText, { color: theme.mode === "dark" ? "#000" : "#fff" }]}>Đăng ký</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={[styles.footerText, { color: theme.text }]}> 
+          Đã có tài khoản?
+          <Text
+            style={styles.registerNow}
+            onPress={() => navigation.navigate("Login")}
+          >
+            {" Đăng nhập ngay"}
+          </Text>
+        </Text>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -93,68 +160,71 @@ export default RegisterScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  keyboardView: {
+    flex: 1,
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 20,
+  },
+  themeToggleIcon: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
   },
   logo: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#412C2C",
-    marginBottom: 20,
+    marginBottom: 12,
   },
-  registerText: {
+  title: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#412C2C",
-    marginBottom: 20,
-  },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    padding: 10,
-    marginBottom: 20,
+    marginBottom: 28,
   },
   input: {
-    flex: 1,
+    width: "100%",
+    padding: 14,
+    borderRadius: 8,
     fontSize: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-    padding: 10,
-    marginBottom: 20,
+    padding: 14,
+    borderRadius: 8,
+    marginBottom: 16,
   },
   passwordInput: {
     flex: 1,
     fontSize: 16,
   },
-  registerButton: {
+  button: {
     width: "100%",
-    backgroundColor: "#412C2C",
-    padding: 15,
+    padding: 14,
     alignItems: "center",
-    borderRadius: 5,
+    borderRadius: 8,
     marginBottom: 20,
   },
-  registerButtonText: {
-    color: "#fff",
-    fontSize: 18,
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    fontSize: 16,
     fontWeight: "bold",
   },
-  alreadyText: {
-    color: "#777",
-    marginTop: 20,
+  footerText: {
+    fontSize: 14,
   },
-  loginNow: {
-    color: "#412C2C",
+  registerNow: {
     fontWeight: "bold",
   },
 });
