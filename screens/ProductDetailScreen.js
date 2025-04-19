@@ -36,7 +36,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
   const [isFavorite, setIsFavorite] = useState(initialProduct.isFavorite || false);
   const [accountId, setAccountId] = useState(null);
 
-  // Feedback state
+  // State cho feedback
   const [feedbackList, setFeedbackList] = useState([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
 
@@ -180,10 +180,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
   // Hàm xử lý toggle favorite
   const toggleFavorite = async () => {
     if (accountId == null) {
-      Alert.alert(
-        "Thông báo",
-        "Không tìm thấy thông tin tài khoản. Vui lòng đăng nhập."
-      );
+      Alert.alert("Thông báo", "Không tìm thấy thông tin tài khoản. Vui lòng đăng nhập.");
       return;
     }
     try {
@@ -206,10 +203,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
   const handleAddToCart = async () => {
     if (!inStock) return;
     if (accountId == null) {
-      Alert.alert(
-        "Thông báo",
-        "Không tìm thấy thông tin tài khoản. Vui lòng đăng nhập."
-      );
+      Alert.alert("Thông báo", "Không tìm thấy thông tin tài khoản. Vui lòng đăng nhập.");
       return;
     }
     const payload = {
@@ -280,7 +274,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
     </View>
   );
 
-  // Hàm xử lý "Xem tất cả" feedback: truyền pageSize lớn (ví dụ 100) để lấy đủ feedback
+  // Hàm xử lý "Xem tất cả" feedback: truyền pageSize lớn (vd: 100) để lấy đủ feedback
   const handleViewAllFeedback = async () => {
     setFeedbackLoading(true);
     try {
@@ -334,23 +328,6 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Image Section */}
         <View style={styles.imageSection}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.thumbnailsContainer}
-          >
-            {availableColors.map((color, index) => (
-              <TouchableOpacity
-                key={index.toString()}
-                style={[
-                  styles.colorCircle,
-                  { backgroundColor: color },
-                  selectedColor === color && styles.selectedColorCircle,
-                ]}
-                onPress={() => handleColorSelect(color)}
-              />
-            ))}
-          </ScrollView>
           <Image source={{ uri: selectedImage }} style={styles.mainImage} />
         </View>
 
@@ -376,6 +353,28 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
           {discountPercentage > 0 && (
             <Text style={styles.originalPriceText}>{formatVND(basePrice)}</Text>
           )}
+
+          {/* Màu sắc: hiển thị dưới phần giá, trên phần kích cỡ */}
+          <Text style={styles.sectionLabel}>Màu sắc</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.colorListContainer}
+          >
+            {availableColors.map((color, index) => (
+              <TouchableOpacity
+                key={index.toString()}
+                style={[
+                  styles.colorCircle,
+                  { backgroundColor: color },
+                  selectedColor === color && styles.selectedColorCircle,
+                ]}
+                onPress={() => handleColorSelect(color)}
+              />
+            ))}
+          </ScrollView>
+
+          {/* Kích cỡ */}
           <Text style={styles.sectionLabel}>Size</Text>
           <View style={styles.sizeContainer}>
             {availableSizes.map((size) => (
@@ -399,12 +398,13 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
             ))}
           </View>
 
+          {/* Số lượng */}
           <View style={styles.quantityRow}>
-            <TouchableOpacity onPress={() => decrementQty()} style={styles.qtyBtn}>
+            <TouchableOpacity onPress={decrementQty} style={styles.qtyBtn}>
               <Ionicons name="remove" size={20} color="#000" />
             </TouchableOpacity>
             <Text style={styles.qtyValue}>{quantity}</Text>
-            <TouchableOpacity onPress={() => incrementQty()} style={styles.qtyBtn}>
+            <TouchableOpacity onPress={incrementQty} style={styles.qtyBtn}>
               <Ionicons name="add" size={20} color="#000" />
             </TouchableOpacity>
           </View>
@@ -424,7 +424,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
             ) : (
               <View>
                 {feedbackList.map((fb, idx) => renderFeedbackItem(fb, idx))}
-                {feedbackList.length < 100 && ( 
+                {feedbackList.length < 100 && (
                   <TouchableOpacity onPress={handleViewAllFeedback}>
                     <Text style={styles.viewAllText}>Xem tất cả</Text>
                   </TouchableOpacity>
@@ -504,6 +504,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionLabel: { fontSize: 16, fontWeight: "600", marginTop: 10, marginBottom: 6 },
+  // New style cho danh mục màu sắc trong chi tiết sản phẩm
+  colorListContainer: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+  },
+  colorCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  selectedColorCircle: {
+    borderWidth: 2,
+    borderColor: "#333",
+  },
   sizeContainer: { flexDirection: "row", marginBottom: 8 },
   sizeButton: {
     backgroundColor: "#f0f0f0",
@@ -541,15 +558,6 @@ const styles = StyleSheet.create({
     elevation: 100,
   },
   toastText: { color: "#fff", fontSize: 14, fontWeight: "bold" },
-  colorCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  selectedColorCircle: { borderWidth: 2, borderColor: "#333" },
 
   // ===== FEEDBACK STYLES =====
   feedbackSection: {
@@ -563,7 +571,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 8,
   },
-  // Mỗi feedback được hiển thị trong một card
   feedbackCard: {
     backgroundColor: "#f7f7f7",
     borderRadius: 8,
@@ -575,27 +582,37 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  feedbackHeader: {
+  feedbackHeader: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  feedbackTime: { fontSize: 12, color: "#888", marginLeft: 4 },
+  feedbackComment: { fontSize: 14, color: "#333" },
+  feedbackImage: { width: 60, height: 60, marginTop: 8, borderRadius: 4 },
+  viewAllText: { marginTop: 4, fontSize: 14, fontWeight: "600", color: "#007bff" },
+  
+  topBar: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 40,
+    paddingBottom: 10,
+    backgroundColor: "#fff",
   },
-  feedbackTime: {
-    fontSize: 12,
-    color: "#888",
-    marginLeft: 4,
+  headerTitle: { fontSize: 18, fontWeight: "bold" },
+  topBarRight: { flexDirection: "row", alignItems: "center" },
+  iconButton: { marginLeft: 10 },
+  imageSection: { paddingHorizontal: 16, marginBottom: 10 },
+  thumbnailsContainer: { paddingVertical: 10 },
+  mainImage: { width: "100%", height: 300, borderRadius: 8, resizeMode: "cover" },
+  detailsContainer: { paddingHorizontal: 16 },
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
   },
-  feedbackComment: { fontSize: 14, color: "#333" },
-  feedbackImage: {
-    width: 60,
-    height: 60,
-    marginTop: 8,
-    borderRadius: 4,
-  },
-  viewAllText: {
-    marginTop: 4,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#007bff",
-  },
+  productName: { fontSize: 20, fontWeight: "bold", maxWidth: "70%" },
+  ratingRow: { flexDirection: "row", alignItems: "center" },
+  ratingText: { marginLeft: 4, fontSize: 14, color: "#555" },
+  priceRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  priceText: { fontSize: 18, fontWeight: "bold", color: "#FC7B54" },
 });
