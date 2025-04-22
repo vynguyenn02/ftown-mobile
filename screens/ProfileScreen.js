@@ -115,7 +115,7 @@ const ProfileScreen = ({ navigation }) => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.orderStatusItem}
-              onPress={() => handleOrderStatus("Return")}
+              onPress={() => navigation.navigate("ReturnableScreen")}
             >
               <Ionicons name="refresh-circle-outline" size={28} color={ACCENT} />
               <Text style={[styles.orderStatusLabel, { color: TEXT }]}>Đổi/Trả</Text>

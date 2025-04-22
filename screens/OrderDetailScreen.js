@@ -218,14 +218,11 @@ export default function OrderDetailScreen() {
           </Text>
         </View>
 
-        {/* Actions */}
+        {order.status?.toLowerCase() === "completed" && (
         <View style={styles.buttonRow}>
           {/* nút Đánh giá */}
           <TouchableOpacity
-            style={[
-              styles.primaryBtn,
-              { backgroundColor: theme.primary },
-            ]}
+            style={[styles.primaryBtn, { backgroundColor: theme.primary }]}
             onPress={handleFeedback}
           >
             <Text style={[styles.primaryText, { color: theme.background }]}>
@@ -242,15 +239,15 @@ export default function OrderDetailScreen() {
                 backgroundColor: cardBg,
               },
             ]}
-            onPress={() =>
-              navigation.navigate("ReturnRequestScreen", { orderId })
-            }
+            onPress={() => navigation.navigate("ReturnRequestScreen", { orderId })}
           >
             <Text style={[styles.secondaryText, { color: theme.primary }]}>
               Đổi/Trả
             </Text>
           </TouchableOpacity>
         </View>
+      )}
+
       </ScrollView>
     </SafeAreaView>
   );

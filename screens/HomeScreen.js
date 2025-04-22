@@ -1,5 +1,4 @@
 // HomeScreen.js
-
 import React, { useState, useEffect, useContext } from "react";
 import {
   View,
@@ -10,7 +9,10 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
+  StatusBar,
+  Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
 import Header from "../components/Header";
 import productApi from "../api/productApi";
@@ -164,7 +166,10 @@ const HomeScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor={theme.background} />
       <Header />
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -180,14 +185,16 @@ const HomeScreen = ({ navigation }) => {
           contentContainerStyle={styles.productListContainer}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -199,8 +206,12 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
     marginBottom: 12,
   },
-  listHeaderContainer: { marginBottom: 20 },
-  categoryListContent: { paddingHorizontal: 12 },
+  listHeaderContainer: {
+    marginBottom: 20,
+  },
+  categoryListContent: {
+    paddingHorizontal: 12,
+  },
   categoryButton: {
     marginRight: 10,
     paddingVertical: 8,
@@ -208,19 +219,44 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
-  productListContainer: { paddingHorizontal: 10, paddingBottom: 80 },
+  productListContainer: {
+    paddingHorizontal: 10,
+    paddingBottom: 80,
+  },
   productCard: {
     width: CARD_WIDTH,
     borderRadius: 10,
     margin: 8,
     overflow: "hidden",
   },
-  productImage: { width: "100%", height: 160, resizeMode: "cover" },
-  productName: { fontSize: 14, fontWeight: "600", marginBottom: 4 },
-  ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
-  ratingText: { fontSize: 12, marginLeft: 4 },
-  priceRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-  discountedPriceText: { fontSize: 14, fontWeight: "bold" },
+  productImage: {
+    width: "100%",
+    height: 160,
+    resizeMode: "cover",
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  discountedPriceText: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
   originalPriceText: {
     fontSize: 12,
     textDecorationLine: "line-through",
@@ -238,5 +274,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "bold",
   },
-  productPrice: { fontSize: 14, fontWeight: "bold" },
+  productPrice: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
 });

@@ -16,6 +16,9 @@ import CheckoutScreen from "../screens/CheckoutScreen";
 import SelectAddressScreen from "../screens/SelectAddressScreen";
 import FeedbackScreen from "../screens/FeedbackScreen";
 import NotificationScreen from "../screens/NotificationScreen";
+import ReturnableScreen from "../screens/ReturnableScreen";
+import ReturnRequestScreen from "../screens/ReturnRequestScreen";
+import ReturnCheckoutScreen from "../screens/ReturnCheckoutScreen";
 const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
@@ -63,6 +66,9 @@ const AppStack = () => {
       <Stack.Screen name="CreateAddressScreen" component={CreateAddressScreen} />
       <Stack.Screen name="EditAddressScreen" component={EditAddressScreen} />
       <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+      <Stack.Screen name="ReturnableScreen" component={ReturnableScreen} options={{ title: "Đơn có thể đổi trả" }} />
+      <Stack.Screen name="ReturnRequestScreen" component={ReturnRequestScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ReturnCheckoutScreen" component={ReturnCheckoutScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };
