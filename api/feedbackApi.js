@@ -1,5 +1,5 @@
 // feedbackApi.js
-import { post, get } from "../utils/axios"; // Điều chỉnh đường dẫn nếu cần
+import { postMultipart, get } from "../utils/axios"; // Điều chỉnh đường dẫn nếu cần
 
 const FEEDBACK_ENDPOINT = {
   CREATE_FEEDBACK: "/feedback/create-multiple",
@@ -7,18 +7,46 @@ const FEEDBACK_ENDPOINT = {
 };
 
 class FeedbackService {
-  /**
-   * Gửi nhiều feedback cùng lúc.
-   * @param {CreateFeedbackRequest[]} payload - Mảng các object feedback.
-   * @returns {Promise} Promise trả về response từ axios, theo định dạng CreateFeedbackResponse.
+   /**
+   * Gửi nhiều feedback cùng lúc bằng FormData.
+   * @param {Array<Object>} payload - Mảng các feedback object:
+   *   { orderDetailId, accountId, productId, rating, comment, createdDate, imageFile? }
    */
-  createFeedback(payload) {
-    // Gói mảng payload vào trong 1 object có key "feedbacks"
-    const data = { feedbacks: payload };
-    console.log("Payload to submit:", data);
-    return post(FEEDBACK_ENDPOINT.CREATE_FEEDBACK, data);
-  }
+   createFeedback(payload) {
+    const formData = new FormData();
 
+    payload.forEach((fb, idx) => {
+      if (fb.orderDetailId != null) {
+        formData.append(`feedbacks[${idx}].orderDetailId`, fb.orderDetailId.toString());
+      }
+      formData.append(`feedbacks[${idx}].accountId`, fb.accountId.toString());
+      formData.append(`feedbacks[${idx}].productId`, fb.productId.toString());
+
+      // Nếu bạn có Title trong object, bỏ vào
+      if (fb.Title) {
+        formData.append(`feedbacks[${idx}].Title`, fb.Title);
+      }
+
+      formData.append(`feedbacks[${idx}].rating`, fb.rating.toString());
+      formData.append(`feedbacks[${idx}].comment`, fb.comment);
+      formData.append(`feedbacks[${idx}].createdDate`, fb.createdDate);
+
+      // Chỉ append file nếu có
+      if (fb.imageFile) {
+        formData.append(`feedbacks[${idx}].imageFile`, {
+          uri: fb.imageFile.uri,
+          name: fb.imageFile.name,
+          type: fb.imageFile.type,
+        });
+      }
+    });
+
+    // Debug: xem payload đang gửi (dạng mảng JS) 
+    console.log('Submitting FormData payload:', payload);
+
+    // Gửi multipart/form-data
+    return postMultipart(FEEDBACK_ENDPOINT.CREATE_FEEDBACK, formData);
+  }
   /**
    * Lấy danh sách feedback của sản phẩm theo productId.
    * @param {number} productId - ID của sản phẩm.

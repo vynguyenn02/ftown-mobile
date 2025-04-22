@@ -1,4 +1,5 @@
 // screens/ProductDetailScreen.js
+
 import React, { useEffect, useState, useContext } from "react";
 import {
   View,
@@ -11,7 +12,7 @@ import {
   Alert,
   SafeAreaView,
 } from "react-native";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Header from "../components/Header";
 import productApi from "../api/productApi";
@@ -31,10 +32,15 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
 
   const [product, setProduct] = useState(initialProduct || null);
   const [loading, setLoading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState(initialProduct?.imagePath || null);
+  const [selectedImage, setSelectedImage] = useState(
+    initialProduct?.imagePath || null
+  );
   const [quantity, setQuantity] = useState(1);
   const [showToast, setShowToast] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(initialProduct?.isFavorite || false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [isFavorite, setIsFavorite] = useState(
+    initialProduct?.isFavorite || false
+  );
   const [accountId, setAccountId] = useState(null);
   const [feedbackList, setFeedbackList] = useState([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
@@ -50,7 +56,9 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
       try {
         const storedId = await AsyncStorage.getItem("accountId");
         if (storedId) setAccountId(parseInt(storedId, 10));
-      } catch (e) { console.error(e) }
+      } catch (e) {
+        console.error(e);
+      }
     })();
   }, []);
 
@@ -151,14 +159,18 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
   const handleAddToCart = async () => {
     if (!inStock || !accountId) return;
     try {
-      await cartService.addProductToCart(accountId, {
+      const resp = await cartService.addProductToCart(accountId, {
         productId: product.productId,
         size: selectedSize || "M",
         color: selectedColor || "#000",
         quantity,
       });
+      const msg = resp.data?.message || "Thêm vào giỏ hàng thành công!";
+      setToastMessage(msg);
+
       const cartResp = await cartService.getCart(accountId);
       setCartItems(cartResp.data?.data || []);
+
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2000);
     } catch {
@@ -220,7 +232,6 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
     }
   };
 
-  // loading
   if (loading || !product)
     return (
       <SafeAreaView
@@ -240,7 +251,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
     >
       <Header />
 
-      {/* top bar */}
+      {/* Top bar */}
       <View style={[styles.topBar, { backgroundColor: theme.background }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={28} color={theme.text} />
@@ -265,8 +276,8 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
         </View>
       </View>
 
-      <ScrollView>
-        {/* image */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
+        {/* Image */}
         <View style={styles.imageSection}>
           {selectedImage ? (
             <Image
@@ -278,18 +289,11 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
           )}
         </View>
 
-        {/* details */}
+        {/* Details */}
         <View style={styles.detailsContainer}>
           <Text style={[styles.productName, { color: theme.text }]}>
             {product.name}
           </Text>
-
-          <View style={styles.ratingRow}>
-            <MaterialIcons name="star" size={16} color="#FFD700" />
-            <Text style={[styles.ratingText, { color: theme.subtext }]}>
-              {product.rating} ({product.reviews})
-            </Text>
-          </View>
 
           <View style={styles.priceRow}>
             <Text style={[styles.priceText, { color: theme.primary }]}>
@@ -316,6 +320,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
             </Text>
           )}
 
+          {/* Colors */}
           <Text style={[styles.sectionLabel, { color: theme.text }]}>
             Màu sắc
           </Text>
@@ -339,6 +344,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
             ))}
           </ScrollView>
 
+          {/* Sizes */}
           <Text style={[styles.sectionLabel, { color: theme.text }]}>
             Size
           </Text>
@@ -369,6 +375,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
             ))}
           </View>
 
+          {/* Quantity */}
           <View style={styles.quantityRow}>
             <TouchableOpacity
               onPress={decrementQty}
@@ -387,11 +394,12 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
             </TouchableOpacity>
           </View>
 
+          {/* Description */}
           <Text style={[styles.description, { color: theme.subtext }]}>
             {product.description || "No description."}
           </Text>
 
-          {/* feedback */}
+          {/* Feedback */}
           <View
             style={[
               styles.feedbackSection,
@@ -420,27 +428,34 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
               </>
             )}
           </View>
-
-          {/* add to cart */}
-          <TouchableOpacity
-            style={[
-              styles.addToCartButton,
-              {
-                backgroundColor: inStock
-                  ? theme.primary
-                  : theme.subtext,
-              },
-            ]}
-            onPress={handleAddToCart}
-            disabled={!inStock}
-          >
-            <Text style={[styles.addToCartText, { color: theme.background }]}>
-              {inStock ? "Add to Cart" : "Out of Stock"}
-            </Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
+      {/* Sticky footer button */}
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: theme.background,
+            borderTopColor: theme.border,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={[
+            styles.footerButton,
+            { backgroundColor: inStock ? theme.primary : theme.subtext },
+          ]}
+          onPress={handleAddToCart}
+          disabled={!inStock}
+        >
+          <Text style={[styles.footerButtonText, { color: theme.background }]}>
+            {inStock ? "THÊM VÀO GIỎ HÀNG" : "HẾT HÀNG"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Toast */}
       {showToast && (
         <View
           style={[
@@ -449,7 +464,7 @@ const ProductDetailScreen = ({ route, navigation, cartItems, setCartItems }) => 
           ]}
         >
           <Text style={[styles.toastText, { color: theme.background }]}>
-            Product added to cart!
+            {toastMessage}
           </Text>
         </View>
       )}
@@ -480,9 +495,6 @@ const styles = StyleSheet.create({
   detailsContainer: { paddingHorizontal: 16 },
   productName: { fontSize: 20, fontWeight: "bold", marginBottom: 6 },
 
-  ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
-  ratingText: { marginLeft: 4, fontSize: 14 },
-
   priceRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
   priceText: { fontSize: 18, fontWeight: "bold" },
   discountBadge: {
@@ -504,7 +516,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 6,
   },
-
   colorListContainer: { paddingHorizontal: 4, paddingVertical: 4 },
   colorCircle: {
     width: 30,
@@ -521,6 +532,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginRight: 8,
   },
+  sizeText: { fontSize: 14 },
 
   quantityRow: {
     flexDirection: "row",
@@ -554,18 +566,26 @@ const styles = StyleSheet.create({
   feedbackImage: { width: 60, height: 60, marginTop: 8, borderRadius: 4 },
   viewAllText: { marginTop: 4, fontSize: 14, fontWeight: "600" },
 
-  addToCartButton: {
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginVertical: 20,
-    marginHorizontal: 16,
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    borderTopWidth: 1,
   },
-  addToCartText: { fontSize: 16, fontWeight: "bold" },
+  footerButton: {
+    width: "100%",
+    height: 50,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  footerButtonText: { fontSize: 16, fontWeight: "bold" },
 
   toastContainer: {
     position: "absolute",
-    bottom: 80,
+    bottom: 100,
     left: 16,
     right: 16,
     paddingVertical: 10,
