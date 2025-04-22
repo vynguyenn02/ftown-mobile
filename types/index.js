@@ -533,7 +533,7 @@
  * @property {number} [rating]
  * @property {string} [comment]
  * @property {string} [createdDate]
- * @property {string} [imagePath]
+ * @property {string} [imageFile]
  */
 
 /**
