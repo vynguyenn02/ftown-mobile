@@ -113,12 +113,22 @@ const HomeScreen = ({ navigation }) => {
           >
             {item.name}
           </Text>
-          <View style={styles.ratingRow}>
-            <MaterialIcons name="star" size={14} color="#FFD700" />
-            <Text style={[styles.ratingText, { color: theme.text }]}>
-              {item.rating || 0} ({item.reviews || 0} reviews)
-            </Text>
-          </View>
+
+          {/* Dãy màu sắc */}
+          {item.colors?.length > 0 && (
+            <View style={styles.colorRow}>
+              {item.colors.map((col, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    styles.colorCircle,
+                    { backgroundColor: col },
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+
           {hasDiscount ? (
             <View style={styles.priceRow}>
               <Text
@@ -178,7 +188,7 @@ const HomeScreen = ({ navigation }) => {
       ) : (
         <FlatList
           data={products}
-          keyExtractor={(item, index) => String(item.id || index)}
+          keyExtractor={(item, index) => String(item.productId || index)}
           renderItem={renderProductItem}
           numColumns={2}
           ListHeaderComponent={ListHeader}
@@ -229,34 +239,30 @@ const styles = StyleSheet.create({
     margin: 8,
     overflow: "hidden",
   },
-  productImage: {
-    width: "100%",
-    height: 160,
-    resizeMode: "cover",
-  },
-  productName: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  ratingRow: {
+
+  productImage: { width: "100%", height: 160, resizeMode: "cover" },
+  productName: { fontSize: 14, fontWeight: "600", marginBottom: 4 },
+
+  // ----- styles cho dãy màu -----
+  colorRow: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  ratingText: {
-    fontSize: 12,
-    marginLeft: 4,
+  colorCircle: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 4,
+    borderWidth: 1,
+    borderColor: "#ddd",
   },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  discountedPriceText: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
+  // -----------------------------
+
+  ratingRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  ratingText: { fontSize: 12, marginLeft: 4 },
+  priceRow: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  discountedPriceText: { fontSize: 14, fontWeight: "bold" },
+
   originalPriceText: {
     fontSize: 12,
     textDecorationLine: "line-through",

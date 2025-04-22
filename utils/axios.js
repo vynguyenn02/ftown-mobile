@@ -1,119 +1,55 @@
-// axios.js
 import axios from "axios";
-// Sử dụng biến API_BASE_URL từ .env
-import { API_BASE_URL } from "@env"; 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "@env";
 
-/**
- * Hàm mẫu lấy accessToken.
- * Bạn cần thay thế bằng logic thật để lấy token, ví dụ từ AsyncStorage hay từ state quản lý authentication.
- */
-const getAccessToken = () => {
-  // Ví dụ: trả về token đã được lưu trữ
-  // return await AsyncStorage.getItem('accessToken');
-  return null;
-};
+// Tạo instance Axios riêng
+const instance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
-/**
- * Hàm request chung để gọi API với Axios.
- *
- * @param {string} endpoint - Đường dẫn của API, ví dụ: "/products/view-all"
- * @param {string} method - Phương thức HTTP, ví dụ: "GET", "POST",...
- * @param {object} headers - Các header tuỳ chỉnh, mặc định là {}
- * @param {object} params - Các tham số query, mặc định là {}
- * @param {object} body - Dữ liệu gửi đi (cho POST, PUT,...), mặc định là {}
- * @returns {Promise} - Promise trả về response của Axios.
- */
-export const request = (endpoint, method, headers = {}, params = {}, body = {}) => {
-  const accessToken = getAccessToken();
+// Interceptor để tự động gắn Authorization vào header
+instance.interceptors.request.use(
+  async (config) => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      console.log("📡 Request URL:", config.baseURL + config.url);
+      return config;
+    } catch (error) {
+      console.log("❌ Lỗi khi lấy token:", error);
+      return config;
+    }
+  },
+  (error) => Promise.reject(error)
+);
 
-  // Hợp nhất headers; nếu có token thì thêm Authorization header
-  const mergedHeaders = Object.assign(
-    {},
-    headers,
-    accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
-  );
+// ⚙️ Các hàm gọi API
+export const get = (url, params = {}, headers = {}) =>
+  instance.get(url, { params, headers });
 
-  // Log URL để debug (có thể bỏ sau khi đã kiểm tra)
-  const fullUrl = API_BASE_URL + endpoint;
-  console.log("Full URL request:", fullUrl, "with params:", params);
+export const post = (url, data = {}, params = {}, headers = {}) =>
+  instance.post(url, data, { params, headers });
 
-  return axios({
-    url: fullUrl,
-    method: method,
-    headers: mergedHeaders,
-    params: params,
-    data: body,
-  });
-};
+export const put = (url, data = {}, params = {}, headers = {}) =>
+  instance.put(url, data, { params, headers });
 
-/**
- * Gửi request GET.
- *
- * @param {string} endpoint - Đường dẫn API
- * @param {object} params - Tham số query
- * @param {object} headers - Header tuỳ chỉnh
- * @returns {Promise} - Promise trả về response của Axios.
- */
-export const get = (endpoint, params = {}, headers = {}) => {
-  return request(endpoint, "GET", headers, params);
-};
+export const remove = (url, data = {}, params = {}, headers = {}) =>
+  instance.delete(url, { data, params, headers });
 
-/**
- * Gửi request POST.
- *
- * @param {string} endpoint - Đường dẫn API
- * @param {object} body - Dữ liệu gửi đi
- * @param {object} params - Tham số query
- * @param {object} headers - Header tuỳ chỉnh
- * @returns {Promise} - Promise trả về response của Axios.
- */
-export const post = (endpoint, body = {}, params = {}, headers = {}) => {
-  return request(endpoint, "POST", headers, params, body);
-};
-
-/**
- * Gửi request PUT.
- *
- * @param {string} endpoint - Đường dẫn API
- * @param {object} body - Dữ liệu gửi đi
- * @param {object} params - Tham số query
- * @param {object} headers - Header tuỳ chỉnh
- * @returns {Promise} - Promise trả về response của Axios.
- */
-export const put = (endpoint, body = {}, params = {}, headers = {}) => {
-  return request(endpoint, "PUT", headers, params, body);
-};
-
-/**
- * Gửi request DELETE.
- *
- * @param {string} endpoint - Đường dẫn API
- * @param {object} body - Dữ liệu gửi đi (nếu cần)
- * @param {object} params - Tham số query
- * @param {object} headers - Header tuỳ chỉnh
- * @returns {Promise} - Promise trả về response của Axios.
- */
-export const remove = (endpoint, body = {}, params = {}, headers = {}) => {
-  return request(endpoint, "DELETE", headers, params, body);
-};
-
-/**
- * Gửi request POST với dữ liệu multipart (FormData).
- *
- * @param {string} endpoint - Đường dẫn API
- * @param {FormData} formData - Dữ liệu kiểu FormData
- * @returns {Promise} - Promise trả về response của Axios.
- */
-export const postMultipart = (endpoint, formData) => {
-  const accessToken = getAccessToken();
-
-  return axios({
-    url: API_BASE_URL + endpoint,
-    method: "POST",
+// Gửi form-data (ví dụ: upload ảnh)
+export const postMultipart = async (url, formData) => {
+  const token = await AsyncStorage.getItem("accessToken");
+  return instance.post(url, formData, {
     headers: {
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      Authorization: token ? `Bearer ${token}` : "",
       "Content-Type": "multipart/form-data",
     },
-    data: formData,
   });
 };
+
+export default instance;
