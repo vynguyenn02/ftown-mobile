@@ -1,21 +1,22 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "react-native";
+import Toast from "react-native-toast-message";
+
 import AppStack from "./navigator/AppStack";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ThemeProvider } from "./context/ThemeContext"; // ✅ Thêm ThemeProvider
+import { ThemeProvider } from "./context/ThemeContext";
+import { NotificationProvider } from "./context/NotificationContext";
 
 export default function App() {
-  useEffect(() => {
-    AsyncStorage.removeItem("userToken");
-  }, []);
-
   return (
-    <ThemeProvider>
-      <StatusBar animated={true} />
-      <NavigationContainer>
-        <AppStack />
-      </NavigationContainer>
-    </ThemeProvider>
+    <NotificationProvider>
+      <ThemeProvider>
+        <StatusBar animated />
+        <NavigationContainer>
+          <AppStack />
+        </NavigationContainer>
+        <Toast />
+      </ThemeProvider>
+    </NotificationProvider>
   );
 }

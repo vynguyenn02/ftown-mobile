@@ -1,11 +1,12 @@
-// OrderDetailScreen.js
-import React, { useEffect, useState } from "react";
+// screens/OrderDetailScreen.js
+import React, { useEffect, useState, useContext } from "react";
 import {
+  SafeAreaView,
+  ScrollView,
   View,
   Text,
   StyleSheet,
   Image,
-  ScrollView,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
@@ -13,240 +14,274 @@ import {
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import orderApi from "../api/orderApi"; // This module should export getOrdersReturnRequest as described
+import orderApi from "../api/orderApi";
+import { ThemeContext } from "../context/ThemeContext";
 
 export default function OrderDetailScreen() {
-  const route = useRoute();
+  const { theme } = useContext(ThemeContext);
   const navigation = useNavigation();
+  const route = useRoute();
   const { orderId } = route.params;
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState(null);
 
+  // Theme-based colors
+  const containerBg = theme.mode === "dark" ? "#181818" : theme.background;
+  const cardBg = theme.mode === "dark" ? "#2A2A2A" : theme.card;
+  const textColor = theme.text;
+  const subtext = theme.subtext;
+  const primary = theme.primary;
+
   useEffect(() => {
-    // Load accountId from AsyncStorage
-    const loadAccountId = async () => {
+    (async () => {
       try {
-        const storedId = await AsyncStorage.getItem("accountId");
-        if (storedId) {
-          setAccountId(parseInt(storedId, 10));
-        }
-      } catch (error) {
-        console.error("Error loading accountId:", error);
-      }
-    };
-    loadAccountId();
+        const stored = await AsyncStorage.getItem("accountId");
+        if (stored) setAccountId(parseInt(stored, 10));
+      } catch {}
+    })();
   }, []);
 
   useEffect(() => {
-    fetchOrderDetail();
+    fetchDetail();
   }, []);
 
-  const fetchOrderDetail = async () => {
+  const fetchDetail = async () => {
     try {
-      const response = await orderApi.getOrderDetail(orderId);
-      if (response.data.status) {
-        setOrder(response.data.data);
-      }
-    } catch (err) {
-      console.log("Lỗi lấy chi tiết đơn:", err);
+      const resp = await orderApi.getOrderDetail(orderId);
+      if (resp.data.status) setOrder(resp.data.data);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
   };
 
-  // Function to translate order status to Vietnamese (as before)
-  const translateStatus = (status) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return "Hoàn thành";
-      case "shipped":
-        return "Đã giao";
-      case "pending confirmed":
-        return "Chờ xác nhận";
-      case "pendingpayment":
-        return "Chờ thanh toán";
-      case "confirmed":
-        return "Đã xác nhận";
-      case "canceled":
-        return "Đã huỷ";
-      default:
-        return status;
+  const translateStatus = (s) => {
+    switch (s?.toLowerCase()) {
+      case "completed": return "Hoàn thành";
+      case "shipped": return "Đã giao";
+      case "pending confirmed": return "Chờ xác nhận";
+      case "pendingpayment": return "Chờ thanh toán";
+      case "confirmed": return "Đã xác nhận";
+      case "canceled": return "Đã huỷ";
+      default: return s;
     }
   };
 
-  // Function to get style for status badge
-  const getStatusColorStyle = (status) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return { backgroundColor: "#e0f8ec", color: "#1aa260" };
-      case "shipped":
-        return { backgroundColor: "#e3f2fd", color: "#2196f3" };
-      case "pending confirmed":
-        return { backgroundColor: "#fff9c4", color: "#f9a825" };
-      case "pendingpayment":
-        return { backgroundColor: "#fff4e5", color: "#f57c00" };
-      case "confirmed":
-        return { backgroundColor: "#f3e5f5", color: "#7b1fa2" };
-      case "canceled":
-        return { backgroundColor: "#fdecea", color: "#d32f2f" };
-      default:
-        return { backgroundColor: "#eee", color: "#555" };
+  const getStatusStyle = (s) => {
+    switch (s?.toLowerCase()) {
+      case "completed": return { bg: "#e0f8ec", color: "#1aa260" };
+      case "shipped":   return { bg: "#e3f2fd", color: "#2196f3" };
+      case "pending confirmed": return { bg: "#fff9c4", color: "#f9a825" };
+      case "pendingpayment":     return { bg: "#fff4e5", color: "#f57c00" };
+      case "confirmed": return { bg: "#f3e5f5", color: "#7b1fa2" };
+      case "canceled":  return { bg: "#fdecea", color: "#d32f2f" };
+      default:          return { bg: "#eee", color: "#555" };
     }
   };
 
-  // Handler for "Đánh giá" button.
   const handleFeedback = async () => {
     if (!accountId) {
       Alert.alert("Thông báo", "Không tìm thấy thông tin tài khoản.");
       return;
     }
     try {
-      const response = await orderApi.getOrdersReturnRequest(accountId, orderId);
-      console.log("Order return request response:", response.data);
-      if (response.data && response.data.data) {
-        // Navigate to FeedbackScreen, passing orderId and returnData from response
-        navigation.navigate("FeedbackScreen", { orderId, returnData: response.data.data });
+      const resp = await orderApi.getOrdersReturnRequest(accountId, orderId);
+      if (resp.data?.data) {
+        navigation.navigate("FeedbackScreen", { orderId, returnData: resp.data.data });
       } else {
-        Alert.alert("Lỗi", "Không tìm thấy dữ liệu yêu cầu đổi/trả cho đơn hàng này.");
+        Alert.alert("Lỗi", "Không tìm thấy dữ liệu đổi/trả cho đơn này.");
       }
-    } catch (error) {
-      console.error("Error fetching return request:", error);
-      Alert.alert("Lỗi", "Không thể lấy dữ liệu yêu cầu đổi/trả, vui lòng thử lại sau.");
+    } catch {
+      Alert.alert("Lỗi", "Không thể lấy dữ liệu đổi/trả.");
     }
   };
 
   if (loading) {
     return (
-      <ActivityIndicator style={{ marginTop: 20 }} size="large" color="#FF3B30" />
+      <SafeAreaView style={[styles.loadingWrap, { backgroundColor: containerBg }]}>
+        <ActivityIndicator size="large" color={primary} />
+      </SafeAreaView>
     );
   }
 
   if (!order) {
-    return <Text style={{ textAlign: "center", marginTop: 20 }}>Không tìm thấy đơn hàng.</Text>;
+    return (
+      <SafeAreaView style={[styles.loadingWrap, { backgroundColor: containerBg }]}>
+        <Text style={{ color: textColor }}>Không tìm thấy đơn hàng.</Text>
+      </SafeAreaView>
+    );
   }
 
-  return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerText}>Thông tin đơn hàng #{order.orderId}</Text>
-      </View>
+  const statusStyle = getStatusStyle(order.status);
 
-      {/* Thông tin nhận hàng */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Thông tin nhận hàng</Text>
-        <View style={styles.infoRow}>
-          <Ionicons name="person" size={16} color="#333" />
-          <Text style={styles.infoText}>{order.fullName}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="call" size={16} color="#333" />
-          <Text style={styles.infoText}>{order.phoneNumber}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <MaterialIcons name="email" size={16} color="#333" />
-          <Text style={styles.infoText}>{order.email}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Entypo name="location-pin" size={16} color="#333" />
-          <Text style={styles.infoText}>
-            {order.address}, {order.city}, {order.district}, {order.province}
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Header */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color={textColor} />
+          </TouchableOpacity>
+          <Text style={[styles.headerText, { color: textColor }]}>
+            Đơn #{order.orderId}
           </Text>
         </View>
-      </View>
 
-      {/* Danh sách sản phẩm */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Sản phẩm</Text>
-        {order.orderItems.map((item, idx) => (
-          <View key={idx} style={styles.productRow}>
-            <Image source={{ uri: item.imageUrl }} style={styles.image} />
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={styles.productName}>{item.productName}</Text>
-              <Text style={styles.meta}>Size: {item.size}</Text>
-              <View style={styles.colorRow}>
-                <Text style={styles.meta}>Màu:</Text>
-                <View
-                  style={[styles.colorDot, { backgroundColor: item.color }]}
-                />
-              </View>
-              <Text style={styles.meta}>Số lượng: {item.quantity}</Text>
-              <Text style={styles.meta}>
-                Giá: {item.priceAtPurchase.toLocaleString()}đ
-              </Text>
-              {item.discountApplied > 0 && (
-                <Text style={styles.meta}>
-                  Đã giảm: {item.discountApplied.toLocaleString()}đ
-                </Text>
-              )}
-            </View>
-          </View>
-        ))}
-      </View>
-
-      {/* Tổng kết đơn */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Tổng kết</Text>
-        <Text style={styles.meta}>
-          Phương thức thanh toán: {order.paymentMethod}
-        </Text>
-        <Text style={styles.meta}>
-          Phí vận chuyển: {order.shippingCost.toLocaleString()}đ
-        </Text>
-        <Text style={styles.total}>
-          Tổng cộng: {(order.orderTotal + order.shippingCost).toLocaleString()}đ
-        </Text>
-        <View style={[styles.statusBadge, getStatusColorStyle(order.status)]}>
-          <Text style={styles.statusText}>{translateStatus(order.status)}</Text>
+        {/* Recipient Info */}
+        <View style={[styles.card, { backgroundColor: cardBg }]}>
+          <Text style={[styles.cardTitle, { color: textColor }]}>
+            Thông tin nhận hàng
+          </Text>
+          <InfoRow icon={<Ionicons name="person" size={16} color={subtext} />} text={order.fullName} textColor={textColor} />
+          <InfoRow icon={<Ionicons name="call" size={16} color={subtext} />} text={order.phoneNumber} textColor={textColor} />
+          <InfoRow icon={<MaterialIcons name="email" size={16} color={subtext} />} text={order.email} textColor={textColor} />
+          <InfoRow
+            icon={<Entypo name="location-pin" size={16} color={subtext} />}
+            text={`${order.address}, ${order.city}, ${order.district}, ${order.province}`}
+            textColor={textColor}
+          />
         </View>
-        <Text style={styles.meta}>
-          Ngày tạo: {new Date(order.createdDate).toLocaleString()}
-        </Text>
-      </View>
 
-      {/* Action Buttons */}
-      <View style={styles.buttonRow}>
-        {/* Updated button: on press, calls handleFeedback to send API and then navigate */}
-        <TouchableOpacity style={styles.blackButton} onPress={handleFeedback}>
-          <Text style={styles.blackButtonText}>Đánh giá</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.whiteButton}
-          onPress={() =>
-            navigation.navigate("ReturnRequestScreen", { orderId: order.orderId })
-          }
-        >
-          <Text style={styles.whiteButtonText}>Đổi/Trả</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        {/* Items */}
+        <View style={[styles.card, { backgroundColor: cardBg }]}>
+          <Text style={[styles.cardTitle, { color: textColor }]}>Sản phẩm</Text>
+          {order.orderItems.map((it, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.productRow}
+              activeOpacity={0.8}
+              onPress={() =>
+                navigation.navigate("ProductDetailScreen", { productId: it.productId })
+              }
+            >
+              <Image source={{ uri: it.imageUrl }} style={styles.image} />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.productName, { color: textColor }]}>
+                  {it.productName}
+                </Text>
+                <Text style={[styles.meta, { color: subtext }]}>
+                  Size: {it.size}
+                </Text>
+                <View style={styles.colorRow}>
+                  <Text style={[styles.meta, { color: subtext }]}>Màu:</Text>
+                  <View style={[styles.colorDot, { backgroundColor: it.color }]} />
+                </View>
+                <Text style={[styles.meta, { color: subtext }]}>
+                  SL: {it.quantity}
+                </Text>
+                <Text style={[styles.meta, { color: subtext }]}>
+                  Giá: {it.priceAtPurchase.toLocaleString()}đ
+                </Text>
+                {it.discountApplied > 0 && (
+                  <Text style={[styles.meta, { color: subtext }]}>
+                    Giảm: {it.discountApplied.toLocaleString()}đ
+                  </Text>
+                )}
+              </View>
+              <Entypo name="chevron-right" size={20} color={subtext} />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Summary */}
+        <View style={[styles.card, { backgroundColor: cardBg }]}>
+          <Text style={[styles.cardTitle, { color: textColor }]}>Tổng kết</Text>
+          <Text style={[styles.meta, { color: subtext }]}>
+            Thanh toán: {order.paymentMethod}
+          </Text>
+          <Text style={[styles.meta, { color: subtext }]}>
+            Phí vận chuyển: {order.shippingCost.toLocaleString()}đ
+          </Text>
+          <Text style={[styles.total, { color: textColor }]}>
+            Tổng cộng: {(order.orderTotal + order.shippingCost).toLocaleString()}đ
+          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: statusStyle.bg },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                { color: statusStyle.color },
+              ]}
+            >
+              {translateStatus(order.status)}
+            </Text>
+          </View>
+          <Text style={[styles.meta, { color: subtext }]}>
+            Ngày tạo: {new Date(order.createdDate).toLocaleString()}
+          </Text>
+        </View>
+
+        {/* Actions */}
+        <View style={styles.buttonRow}>
+          {/* nút Đánh giá */}
+          <TouchableOpacity
+            style={[
+              styles.primaryBtn,
+              { backgroundColor: theme.primary },
+            ]}
+            onPress={handleFeedback}
+          >
+            <Text style={[styles.primaryText, { color: theme.background }]}>
+              Đánh giá
+            </Text>
+          </TouchableOpacity>
+
+          {/* nút Đổi/Trả */}
+          <TouchableOpacity
+            style={[
+              styles.secondaryBtn,
+              {
+                borderColor: theme.primary,
+                backgroundColor: cardBg,
+              },
+            ]}
+            onPress={() =>
+              navigation.navigate("ReturnRequestScreen", { orderId })
+            }
+          >
+            <Text style={[styles.secondaryText, { color: theme.primary }]}>
+              Đổi/Trả
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function InfoRow({ icon, text, textColor }) {
+  return (
+    <View style={styles.infoRow}>
+      {icon}
+      <Text style={[styles.infoText, { color: textColor }]}>{text}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: "#F9F9F9",
-    flex: 1,
-  },
+  container: { flex: 1 },
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
+
+  content: { padding: 16 },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
-    gap: 8,
   },
   headerText: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#000",
+    marginLeft: 8,
   },
+
   card: {
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -256,27 +291,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#333",
-  },
+  cardTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
+
   infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 8,
-    gap: 6,
   },
-  infoText: {
-    fontSize: 14,
-    color: "#444",
-    flex: 1,
-  },
+  infoText: { fontSize: 14, flex: 1, marginLeft: 6 },
+
   productRow: {
     flexDirection: "row",
+    alignItems: "center",
     marginBottom: 14,
-    gap: 10,
   },
   image: {
     width: 70,
@@ -284,66 +311,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#eee",
   },
-  productName: {
-    fontWeight: "bold",
-    fontSize: 14,
-    marginBottom: 6,
-    color: "#000",
-  },
-  meta: {
-    fontSize: 13,
-    color: "#555",
-    marginBottom: 2,
-  },
-  colorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
+  productName: { fontSize: 14, fontWeight: "bold", marginBottom: 4 },
+  meta: { fontSize: 13, marginBottom: 2 },
+
+  colorRow: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
   colorDot: {
     width: 16,
     height: 16,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#ccc",
+    marginLeft: 4,
   },
-  total: {
-    fontWeight: "bold",
-    fontSize: 15,
-    color: "#000",
-    marginTop: 8,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 16,
-    marginBottom: 30,
-    gap: 10,
-  },
-  blackButton: {
-    flex: 1,
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  blackButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  whiteButton: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#000",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  whiteButtonText: {
-    color: "#000",
-    fontWeight: "bold",
-  },
+
+  total: { fontSize: 15, fontWeight: "bold", marginTop: 8 },
+
   statusBadge: {
     alignSelf: "flex-start",
     paddingHorizontal: 10,
@@ -351,30 +333,34 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 8,
   },
-  statusText: {
-    fontSize: 13,
+  statusText: { fontSize: 13, fontWeight: "bold" },
+
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 30,
+  },
+  primaryBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginRight: 8,
+  },
+  primaryText: {
     fontWeight: "bold",
-    textTransform: "capitalize",
+    fontSize: 16,
+  },
+  secondaryBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  secondaryText: {
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
-
-function translateStatus(status) {
-  switch (status?.toLowerCase()) {
-    case "completed":
-      return "Hoàn thành";
-    case "shipped":
-      return "Đã giao";
-    case "pending confirmed":
-      return "Chờ xác nhận";
-    case "pendingpayment":
-      return "Chờ thanh toán";
-    case "confirmed":
-      return "Đã xác nhận";
-    case "canceled":
-      return "Đã huỷ";
-    default:
-      return status;
-  }
-}
-
-export { translateStatus };

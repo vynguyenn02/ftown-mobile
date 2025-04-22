@@ -32,6 +32,7 @@ const LoginScreen = ({ navigation }) => {
       const { token, accountId } = await login(email, password);
       await AsyncStorage.setItem("userToken", token);
       await AsyncStorage.setItem("accountId", accountId.toString());
+      await AsyncStorage.setItem("userId", accountId.toString()); 
       navigation.replace("HomeScreen");
     } catch (err) {
       console.log("LOGIN ERROR:", err);

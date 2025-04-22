@@ -15,6 +15,8 @@ import ProfileScreen from "./screens/ProfileScreen";
 import AddressScreen from "./screens/AddressScreen";
 import ProfileInfoScreen from "./screens/ProfileInfoScreen";
 import FavoriteScreen from "./screens/FavoriteScreen";
+import NotificationScreen from "./screens/NotificationScreen";
+import NotificationBellIcon from "./components/NotificationBellIcon";
 
 const Stack = createNativeStackNavigator();
 
@@ -40,23 +42,33 @@ const TabContent = ({ activeTab, setActiveTab, navigation, cartItems, setCartIte
     <View style={styles.container}>
       <View style={styles.screenContainer}>{renderScreen()}</View>
       <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Home")}> 
+        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Home")}>
           <Ionicons name="home" size={24} color={activeTab === "Home" ? ACTIVE_COLOR : "#888"} />
           <Text style={[styles.tabText, activeTab === "Home" && styles.activeText]}>Trang chủ</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Cart")}> 
-          <Ionicons name="cart-outline" size={24} color={activeTab === "Cart" ? ACTIVE_COLOR : "#888"} />
-          <Text style={[styles.tabText, activeTab === "Cart" && styles.activeText]}>Giỏ hàng</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Liked")}> 
+
+        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Liked")}>
           <Ionicons name="heart-outline" size={24} color={activeTab === "Liked" ? ACTIVE_COLOR : "#888"} />
           <Text style={[styles.tabText, activeTab === "Liked" && styles.activeText]}>Yêu thích</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Profile")}> 
+        
+        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Cart")}>
+          <Ionicons name="cart-outline" size={24} color={activeTab === "Cart" ? ACTIVE_COLOR : "#888"} />
+          <Text style={[styles.tabText, activeTab === "Cart" && styles.activeText]}>Giỏ hàng</Text>
+        </TouchableOpacity>
+
+        {/* 🔔 Tab mới cho Thông báo */}
+        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate("NotificationScreen")}>
+          <NotificationBellIcon iconOnly />
+          <Text style={styles.tabText}>Thông báo</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Profile")}>
           <Ionicons name="person-outline" size={24} color={activeTab === "Profile" ? ACTIVE_COLOR : "#888"} />
           <Text style={[styles.tabText, activeTab === "Profile" && styles.activeText]}>Tài khoản</Text>
         </TouchableOpacity>
       </View>
+
     </View>
   );
 };
@@ -85,30 +97,39 @@ const TabNavigator = ({ route }) => {
   const [cartItems, setCartItems] = useState([]);
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="MainTabs">
-        {(props) => (
-          <TabContent
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            cartItems={cartItems}
-            setCartItems={setCartItems}
-            accountId={accountId}
-            {...props}
-          />
-        )}
-      </Stack.Screen>
-      <Stack.Screen name="ProductDetailScreen">
-        {(props) => <ProductDetailScreen {...props} cartItems={cartItems} setCartItems={setCartItems} />}
-      </Stack.Screen>
-      <Stack.Screen name="CartScreen">
-        {(props) => <CartScreen {...props} cartItems={cartItems} setCartItems={setCartItems} accountId={accountId} />}
-      </Stack.Screen>
-      <Stack.Screen name="CheckoutScreen" component={CheckoutScreen} />
-      <Stack.Screen name="OrderScreen" component={OrderScreen} />
-      <Stack.Screen name="AddressScreen" component={AddressScreen} />
-      <Stack.Screen name="ProfileInfoScreen" component={ProfileInfoScreen} />
-    </Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: true }}>
+        <Stack.Screen
+          name="MainTabs"
+          options={{
+            headerShown: false, // ✅ Ẩn hoàn toàn phần header của Stack
+          }}
+        >
+          {(props) => (
+            <TabContent
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              cartItems={cartItems}
+              setCartItems={setCartItems}
+              accountId={accountId}
+              {...props}
+            />
+          )}
+        </Stack.Screen>
+
+        {/* Các màn khác giữ nguyên */}
+        <Stack.Screen name="ProductDetailScreen">
+          {(props) => <ProductDetailScreen {...props} cartItems={cartItems} setCartItems={setCartItems} />}
+        </Stack.Screen>
+        <Stack.Screen name="CartScreen">
+          {(props) => <CartScreen {...props} cartItems={cartItems} setCartItems={setCartItems} accountId={accountId} />}
+        </Stack.Screen>
+        <Stack.Screen name="CheckoutScreen" component={CheckoutScreen} />
+        <Stack.Screen name="OrderScreen" component={OrderScreen} />
+        <Stack.Screen name="AddressScreen" component={AddressScreen} />
+        <Stack.Screen name="ProfileInfoScreen" component={ProfileInfoScreen} />
+        <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+      </Stack.Navigator>
+
   );
 };
 
