@@ -1,5 +1,4 @@
-// src/context/ThemeContext.js
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useMemo } from "react";
 import { useColorScheme } from "react-native";
 import { LightTheme, DarkTheme } from "../theme/theme";
 
@@ -7,19 +6,22 @@ export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const systemScheme = useColorScheme();
-  const [theme, setTheme] = useState(systemScheme === "dark" ? DarkTheme : LightTheme);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev.mode === "light" ? DarkTheme : LightTheme));
-  };
+  const [isDarkMode, setIsDarkMode] = useState(systemScheme === "dark");
 
   useEffect(() => {
-    // Sync theme if system changes
-    setTheme(systemScheme === "dark" ? DarkTheme : LightTheme);
+    setIsDarkMode(systemScheme === "dark");
   }, [systemScheme]);
 
+  const toggleTheme = () => {
+    setIsDarkMode((prev) => !prev);
+  };
+
+  const theme = useMemo(() => {
+    return isDarkMode ? DarkTheme : LightTheme;
+  }, [isDarkMode]);
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, isDarkMode }}>
       {children}
     </ThemeContext.Provider>
   );

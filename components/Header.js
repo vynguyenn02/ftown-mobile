@@ -61,9 +61,21 @@ const Header = () => {
     navigation.replace("Login");
   };
 
+  // 🎨 Tự động chọn màu chữ tương phản với theme.primary
+  const getContrastTextColor = (bgColor) => {
+    const color = bgColor.replace("#", "");
+    const r = parseInt(color.substr(0, 2), 16);
+    const g = parseInt(color.substr(2, 2), 16);
+    const b = parseInt(color.substr(4, 2), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 140 ? "#000000" : "#FFFFFF";
+  };
+
+  const primaryTextColor = getContrastTextColor(theme.primary);
+
   return (
     <>
-      <View style={[styles.header, { backgroundColor: theme.background }]}>        
+      <View style={[styles.header, { backgroundColor: theme.background }]}>
         <Text style={[styles.logo, { color: theme.text }]}>FUNKYTOWN</Text>
         <TouchableOpacity onPress={openSidebar}>
           <MaterialIcons name="menu" size={24} color={theme.text} />
@@ -85,7 +97,7 @@ const Header = () => {
 
             <View style={styles.userInfo}>
               <Text style={[styles.userWelcome, { color: theme.subtext }]}>Xin chào,</Text>
-              <Text style={[styles.userName, { color: theme.text }]}>              
+              <Text style={[styles.userName, { color: theme.text }]}>
                 {profile?.fullName || "Người dùng"} ▼
               </Text>
             </View>
@@ -96,46 +108,32 @@ const Header = () => {
             >
               <FontAwesome name="shopping-bag" size={20} color={theme.text} />
               <Text style={[styles.menuText, { color: theme.text }]}>Đơn hàng</Text>
-              <View style={[styles.badge, { backgroundColor: theme.primary }]}>                
-                <Text style={[styles.badgeText, { color: theme.text }]}>5</Text>
+              <View style={[styles.badge, { backgroundColor: theme.primary }]}>
+                <Text style={[styles.badgeText, { color: primaryTextColor }]}>5</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.menuItem}>
               <FontAwesome name="heart" size={20} color={theme.text} />
               <Text style={[styles.menuText, { color: theme.text }]}>Yêu thích</Text>
-              <View style={[styles.badge, { backgroundColor: theme.primary }]}>                
-                <Text style={[styles.badgeText, { color: theme.text }]}>11</Text>
+              <View style={[styles.badge, { backgroundColor: theme.primary }]}>
+                <Text style={[styles.badgeText, { color: primaryTextColor }]}>11</Text>
               </View>
             </TouchableOpacity>
 
             <View style={styles.bottomButtons}>
-              <TouchableOpacity
-                style={[styles.bottomButton, { borderColor: theme.border }]}
-              >
-                <Text
-                  style={[styles.bottomButtonText, { color: theme.text }]}
-                >
-                  Giới thiệu
-                </Text>
+              <TouchableOpacity style={[styles.bottomButton, { borderColor: theme.border }]}>
+                <Text style={[styles.bottomButtonText, { color: theme.text }]}>Giới thiệu</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.bottomButton, { borderColor: theme.border }]}
-              >
-                <Text
-                  style={[styles.bottomButtonText, { color: theme.text }]}
-                >
-                  FAQ
-                </Text>
+              <TouchableOpacity style={[styles.bottomButton, { borderColor: theme.border }]}>
+                <Text style={[styles.bottomButtonText, { color: theme.text }]}>FAQ</Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity
               style={[styles.customerServiceButton, { backgroundColor: theme.primary }]}
             >
-              <Text
-                style={[styles.customerServiceText, { color: theme.text }]}
-              >
+              <Text style={[styles.customerServiceText, { color: primaryTextColor }]}>
                 Liên hệ hỗ trợ
               </Text>
             </TouchableOpacity>
@@ -144,7 +142,7 @@ const Header = () => {
               style={[styles.logoutButton, { backgroundColor: theme.primary }]}
               onPress={handleLogout}
             >
-              <Text style={[styles.logoutText, { color: theme.text }]}>Đăng xuất</Text>
+              <Text style={[styles.logoutText, { color: primaryTextColor }]}>Đăng xuất</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>

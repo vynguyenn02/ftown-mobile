@@ -18,9 +18,28 @@ export const getProfile = async (accountId) => {
     headers: { Authorization: `Bearer ${token}` },
   });
 
+  return response.data.data;
+};
+
+export const editProfile = async (accountId, formData) => {
+  const token = await AsyncStorage.getItem("userToken");
+  if (!token) throw new Error("Chưa có token xác thực");
+  if (!accountId) throw new Error("Thiếu accountId");
+
+  const url = `/customer/edit-profile/${accountId}`;
+  console.log("📡 PUT:", url);
+
+  const response = await api.put(url, formData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
   return response.data;
 };
 
 export default {
   getProfile,
+  editProfile,
 };

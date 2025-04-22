@@ -6,14 +6,25 @@ export const END_POINT = {
   CREATE_ORDER: "/orders",
   ORDER_DETAIL: (orderId) => `/orders/${orderId}/details`,
   GET_ORDERS_RETURNREQUEST: "/return-requests/order-items",
-
 };
 
 const orderApi = {
-  // Lấy danh sách đơn theo trạng thái
-  getOrdersByStatus(status, accountId) {
-    const query = `?status=${encodeURIComponent(status)}&accountId=${accountId}`;
-    return get(`${END_POINT.GET_ORDERS}${query}`);
+  /**
+   * Lấy danh sách đơn theo trạng thái có phân trang
+   * @param {string} status - Trạng thái đơn (ví dụ: "Pending Confirmed")
+   * @param {number|string} accountId - ID tài khoản
+   * @param {number} [pageNumber=1] - Số trang cần lấy
+   * @param {number} [pageSize=10] - Số mục mỗi trang
+   */
+  getOrdersByStatus(status, accountId, pageNumber = 1, pageSize = 10) {
+    const params = [
+      `status=${encodeURIComponent(status)}`,
+      `accountId=${accountId}`,
+      `pageNumber=${pageNumber}`,
+      `pageSize=${pageSize}`,
+    ].join("&");
+
+    return get(`${END_POINT.GET_ORDERS}?${params}`);
   },
 
   // Lấy chi tiết đơn hàng
