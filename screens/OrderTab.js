@@ -103,11 +103,13 @@ export default function OrderTab({ status }) {
         return "Đã xác nhận";
       case "canceled":
         return "Đã huỷ";
+      case "return requested":
+        return "Đổi/Trả";
       default:
         return s;
     }
   };
-
+  
   const getStatusColorStyle = (s) => {
     switch (s?.toLowerCase()) {
       case "completed":
@@ -120,10 +122,13 @@ export default function OrderTab({ status }) {
         return { backgroundColor: "#fdecea", color: "#d32f2f" };
       case "confirmed":
         return { backgroundColor: "#f3e5f5", color: "#7b1fa2" };
+      case "return requested":
+        return { backgroundColor: "#fff3e0", color: "#fb8c00" };
       default:
         return { backgroundColor: "#eee", color: "#555" };
     }
   };
+  
 
   const renderItem = ({ item }) => {
     const total = (item.subTotal || 0) + (item.shippingCost || 0);

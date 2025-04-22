@@ -29,6 +29,7 @@ const OrderScreen = () => {
     { key: "confirmed", title: "Đã xác nhận" },
     { key: "shipped", title: "Đã giao" },
     { key: "completed", title: "Hoàn thành" },
+    { key: "returnrequested", title: "Đổi/Trả" }, 
     { key: "canceled", title: "Đã huỷ" },
   ]);
 
@@ -41,6 +42,7 @@ const OrderScreen = () => {
         Confirmed: "confirmed",
         Shipped: "shipped",
         Canceled: "canceled",
+        "Return Requested":    "returnrequested",
         Completed: "completed",
       };
       const key = map[statusParam];
@@ -56,6 +58,7 @@ const OrderScreen = () => {
       confirmed: "Confirmed",
       shipped: "Shipped",
       completed: "Completed",
+      returnrequested:  "Return Requested",
       canceled: "Canceled",
     };
     return <OrderTab status={mapStatus[route.key]} />;

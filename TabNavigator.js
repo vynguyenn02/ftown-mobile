@@ -97,6 +97,7 @@ const TabNavigator = ({ route }) => {
   const [cartItems, setCartItems] = useState([]);
 
   return (
+
     <Stack.Navigator screenOptions={{ headerShown: false}}>
         <Stack.Screen
           name="MainTabs"

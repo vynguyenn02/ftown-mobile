@@ -6,6 +6,9 @@ export const END_POINT = {
   CREATE_ORDER: "/orders",
   ORDER_DETAIL: (orderId) => `/orders/${orderId}/details`,
   GET_ORDERS_RETURNREQUEST: "/return-requests/order-items",
+  GET_RETURNABLE_ORDERS: "/orders/returnable",
+  RETURN_CHECKOUT: "/return-requests/checkout",
+  SUBMIT_RETURN_REQUEST: "/return-requests/submit-return-request",
 };
 
 const orderApi = {
@@ -45,7 +48,14 @@ const orderApi = {
       throw err;
     }
   },
-
+    /**
+   * Lấy danh sách đơn hàng đủ điều kiện đổi/trả theo accountId
+   * @param {number} accountId - ID người dùng
+   * @returns {Promise}
+   */
+  getReturnableOrders(accountId) {
+    return get(`${END_POINT.GET_RETURNABLE_ORDERS}?accountId=${accountId}`);
+  },
   /**
    * Lấy danh sách mặt hàng trả hàng theo orderId và accountId.
    * @param {number} accountId - ID của tài khoản.
@@ -55,7 +65,29 @@ const orderApi = {
   getOrdersReturnRequest(accountId, orderId) {
     const url = `${END_POINT.GET_ORDERS_RETURNREQUEST}?orderId=${orderId}&accountId=${accountId}`;
     return get(url);
-  }
+  },
+
+  /**
+   * Gửi yêu cầu tạo phiên đổi trả (checkout đổi trả)
+   * @param {object} payload - { orderId, accountId, selectedItems: [{ productVariantId, quantity }] }
+   * @returns {Promise}
+   */
+  checkoutReturnRequest(payload) {
+    return post(END_POINT.RETURN_CHECKOUT, payload);
+  },
+  
+  /**
+   * Gửi yêu cầu đổi/trả cuối cùng
+   * @param {FormData} formData - dữ liệu dạng multipart/form-data
+   * @returns {Promise}
+   */
+  submitReturnRequest(formData) {
+    return post(END_POINT.SUBMIT_RETURN_REQUEST, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  },
 };
 
 export default orderApi;
