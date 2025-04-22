@@ -1,3 +1,5 @@
+// TabNavigator.js
+
 import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -13,30 +15,18 @@ import ProfileScreen from "./screens/ProfileScreen";
 import AddressScreen from "./screens/AddressScreen";
 import ProfileInfoScreen from "./screens/ProfileInfoScreen";
 import FavoriteScreen from "./screens/FavoriteScreen";
+import NotificationScreen from "./screens/NotificationScreen";
+import NotificationBellIcon from "./components/NotificationBellIcon";
 
 const Stack = createNativeStackNavigator();
 
-const TabContent = ({
-  activeTab,
-  setActiveTab,
-  navigation,
-  cartItems,
-  setCartItems,
-  accountId,
-}) => {
+const TabContent = ({ activeTab, setActiveTab, navigation, cartItems, setCartItems, accountId }) => {
   const renderScreen = () => {
     switch (activeTab) {
       case "Home":
         return <HomeScreen navigation={navigation} />;
       case "Cart":
-        return (
-          <CartScreen
-            accountId={accountId}
-            cartItems={cartItems}
-            setCartItems={setCartItems}
-            navigation={navigation}
-          />
-        );
+        return <CartScreen accountId={accountId} cartItems={cartItems} setCartItems={setCartItems} navigation={navigation} />;
       case "Liked":
         return <FavoriteScreen navigation={navigation} />;
       case "Profile":
@@ -46,95 +36,46 @@ const TabContent = ({
     }
   };
 
-  const ACTIVE_COLOR = "#7E6C6C";
+  const ACTIVE_COLOR = "#000";
 
   return (
     <View style={styles.container}>
       <View style={styles.screenContainer}>{renderScreen()}</View>
       <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => setActiveTab("Home")}
-        >
-          <Ionicons
-            name="home"
-            size={24}
-            color={activeTab === "Home" ? ACTIVE_COLOR : "#888"}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "Home" && { color: ACTIVE_COLOR, fontWeight: "bold" },
-            ]}
-          >
-            Home
-          </Text>
+        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Home")}>
+          <Ionicons name="home" size={24} color={activeTab === "Home" ? ACTIVE_COLOR : "#888"} />
+          <Text style={[styles.tabText, activeTab === "Home" && styles.activeText]}>Trang chủ</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => setActiveTab("Cart")}
-        >
-          <Ionicons
-            name="cart-outline"
-            size={24}
-            color={activeTab === "Cart" ? ACTIVE_COLOR : "#888"}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "Cart" && { color: ACTIVE_COLOR, fontWeight: "bold" },
-            ]}
-          >
-            Cart
-          </Text>
+
+        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Liked")}>
+          <Ionicons name="heart-outline" size={24} color={activeTab === "Liked" ? ACTIVE_COLOR : "#888"} />
+          <Text style={[styles.tabText, activeTab === "Liked" && styles.activeText]}>Yêu thích</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => setActiveTab("Liked")}
-        >
-          <Ionicons
-            name="heart-outline"
-            size={24}
-            color={activeTab === "Liked" ? ACTIVE_COLOR : "#888"}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "Liked" && { color: ACTIVE_COLOR, fontWeight: "bold" },
-            ]}
-          >
-            Yêu thích
-          </Text>
+        
+        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Cart")}>
+          <Ionicons name="cart-outline" size={24} color={activeTab === "Cart" ? ACTIVE_COLOR : "#888"} />
+          <Text style={[styles.tabText, activeTab === "Cart" && styles.activeText]}>Giỏ hàng</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.tabButton}
-          onPress={() => setActiveTab("Profile")}
-        >
-          <Ionicons
-            name="person-outline"
-            size={24}
-            color={activeTab === "Profile" ? ACTIVE_COLOR : "#888"}
-          />
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "Profile" && { color: ACTIVE_COLOR, fontWeight: "bold" },
-            ]}
-          >
-            Tài khoản
-          </Text>
+
+        {/* 🔔 Tab mới cho Thông báo */}
+        <TouchableOpacity style={styles.tabButton} onPress={() => navigation.navigate("NotificationScreen")}>
+          <NotificationBellIcon iconOnly />
+          <Text style={styles.tabText}>Thông báo</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.tabButton} onPress={() => setActiveTab("Profile")}>
+          <Ionicons name="person-outline" size={24} color={activeTab === "Profile" ? ACTIVE_COLOR : "#888"} />
+          <Text style={[styles.tabText, activeTab === "Profile" && styles.activeText]}>Tài khoản</Text>
         </TouchableOpacity>
       </View>
+
     </View>
   );
 };
 
 const TabNavigator = ({ route }) => {
-  // Lấy account từ route.params nếu có, nếu không thì tự lấy từ AsyncStorage
   const { account: routeAccount } = route.params || {};
-  const [accountId, setAccountId] = useState(
-    routeAccount ? routeAccount.accountId : null
-  );
+  const [accountId, setAccountId] = useState(routeAccount ? routeAccount.accountId : null);
 
   useEffect(() => {
     if (!accountId) {
@@ -156,44 +97,39 @@ const TabNavigator = ({ route }) => {
   const [cartItems, setCartItems] = useState([]);
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {/* Màn hình chính (TabContent) */}
-      <Stack.Screen name="MainTabs">
-        {(props) => (
-          <TabContent
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            cartItems={cartItems}
-            setCartItems={setCartItems}
-            accountId={accountId}
-            {...props}
-          />
-        )}
-      </Stack.Screen>
-      <Stack.Screen name="ProductDetailScreen">
-        {(props) => (
-          <ProductDetailScreen
-            {...props}
-            cartItems={cartItems}
-            setCartItems={setCartItems}
-          />
-        )}
-      </Stack.Screen>
-      <Stack.Screen name="CartScreen">
-        {(props) => (
-          <CartScreen
-            {...props}
-            cartItems={cartItems}
-            setCartItems={setCartItems}
-            accountId={accountId}
-          />
-        )}
-      </Stack.Screen>
-      <Stack.Screen name="CheckoutScreen" component={CheckoutScreen} />
-      <Stack.Screen name="OrderScreen" component={OrderScreen} />
-      <Stack.Screen name="AddressScreen" component={AddressScreen} />
-      <Stack.Screen name="ProfileInfoScreen" component={ProfileInfoScreen} />
-    </Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: true }}>
+        <Stack.Screen
+          name="MainTabs"
+          options={{
+            headerShown: false, // ✅ Ẩn hoàn toàn phần header của Stack
+          }}
+        >
+          {(props) => (
+            <TabContent
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              cartItems={cartItems}
+              setCartItems={setCartItems}
+              accountId={accountId}
+              {...props}
+            />
+          )}
+        </Stack.Screen>
+
+        {/* Các màn khác giữ nguyên */}
+        <Stack.Screen name="ProductDetailScreen">
+          {(props) => <ProductDetailScreen {...props} cartItems={cartItems} setCartItems={setCartItems} />}
+        </Stack.Screen>
+        <Stack.Screen name="CartScreen">
+          {(props) => <CartScreen {...props} cartItems={cartItems} setCartItems={setCartItems} accountId={accountId} />}
+        </Stack.Screen>
+        <Stack.Screen name="CheckoutScreen" component={CheckoutScreen} />
+        <Stack.Screen name="OrderScreen" component={OrderScreen} />
+        <Stack.Screen name="AddressScreen" component={AddressScreen} />
+        <Stack.Screen name="ProfileInfoScreen" component={ProfileInfoScreen} />
+        <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+      </Stack.Navigator>
+
   );
 };
 
@@ -205,8 +141,6 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: "row",
     height: 70,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     backgroundColor: "#fff",
     position: "absolute",
     bottom: 0,
@@ -218,6 +152,5 @@ const styles = StyleSheet.create({
   },
   tabButton: { alignItems: "center", justifyContent: "center" },
   tabText: { fontSize: 12, color: "#888", marginTop: 4 },
-  placeholderContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  placeholderText: { fontSize: 20, color: "#333" },
+  activeText: { color: "#000", fontWeight: "bold" },
 });

@@ -1,229 +1,264 @@
-// screens/ProfileInfoScreen.js
-import React from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   SafeAreaView,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Image,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import profileApi from "../api/profileApi";
+import { ThemeContext } from "../context/ThemeContext";
 
-// Ví dụ: Màn hình hiển thị thông tin cá nhân
-const ProfileInfoScreen = ({ navigation }) => {
-  // Dữ liệu mô phỏng
-  const userName = "Nguyễn Ngọc Tường Vy";
-  const userPhone = "0387 502 824";
-  const userGender = "Thêm thông tin";
-  const userBirthday = "21/12/2002";
-  const userAvatar = "https://picsum.photos/200";
+export default function ProfileInfoScreen({ navigation }) {
+  const { theme } = useContext(ThemeContext);
+  const ACCENT = theme.primary;
+  const BG = theme.background;
+  const CARD = theme.card;
+  const TEXT = theme.text;
+  const SUBTEXT = theme.subtext;
 
-  // Xử lý nút "Chỉnh sửa"
-  const handleEditInfo = () => {
-    alert("Chỉnh sửa thông tin cá nhân");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState("female");
+  const [dob, setDob] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [avatar, setAvatar] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [accountId, setAccountId] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const id = await AsyncStorage.getItem("accountId");
+        if (!id) throw new Error("Không tìm thấy accountId");
+        setAccountId(id);
+
+        const res = await profileApi.getProfile(id);
+        setFullName(res.fullName);
+        setEmail(res.email);
+        setPhone(res.phoneNumber);
+        setGender(res.gender || "female");
+        setDob(res.dateOfBirth ? new Date(res.dateOfBirth) : new Date());
+        if (res.imagePath) setAvatarPreview(res.imagePath);
+
+        setLoading(false);
+      } catch (err) {
+        Alert.alert("Lỗi", err.message);
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.5,
+      allowsEditing: true,
+    });
+    if (!result.canceled) setAvatar(result.assets[0]);
   };
 
-  // Xử lý đổi ảnh đại diện
-  const handleChangeAvatar = () => {
-    alert("Đổi ảnh đại diện");
+  const formatDate = (date) => {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   };
 
-  // Điều hướng tab bar
-  const goToHome = () => {
-    // Di chuyển về Tab chính + tab Home
-    navigation.navigate("MainTabs", { activeTab: "Home" });
+  const handleSave = async () => {
+    try {
+      if (!accountId) throw new Error("Không tìm thấy accountId");
+      if (dob > new Date()) {
+        Alert.alert("❌ Lỗi", "Ngày sinh không được lớn hơn ngày hiện tại.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("FullName", fullName.toString());
+      formData.append("Email", email.toString());
+      formData.append("PhoneNumber", phone.toString());
+      formData.append("DateOfBirth", formatDate(dob));
+      const mappedGender =
+        gender === "Nam" ? "male" : gender === "Nữ" ? "female" : "other";
+      formData.append("Gender", mappedGender.toString());
+
+      if (avatar?.uri && avatar.uri.startsWith("file://")) {
+        formData.append("AvatarImage", {
+          uri: avatar.uri,
+          name: "avatar.jpg",
+          type: "image/jpeg",
+        });
+      }
+
+      await profileApi.editProfile(accountId, formData);
+      Alert.alert("✅ Thành công", "Cập nhật thông tin cá nhân thành công!");
+    } catch (error) {
+      console.error("❌ Lỗi khi cập nhật:", error.response?.data || error.message);
+      Alert.alert("❌ Lỗi", error.response?.data?.message || "Yêu cầu không hợp lệ.");
+    }
   };
-  const goToCart = () => {
-    navigation.navigate("MainTabs", { activeTab: "Cart" });
-  };
-  const goToLiked = () => {
-    navigation.navigate("MainTabs", { activeTab: "Liked" });
-  };
-  const goToProfile = () => {
-    // Quay lại tab Profile
-    navigation.navigate("MainTabs", { activeTab: "Profile" });
-  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: BG }]}> 
+        <ActivityIndicator size="large" color={ACCENT} />
+        <Text style={{ color: TEXT, marginTop: 8 }}>Đang tải thông tin...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Thanh Top Bar có nút back */}
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Thông tin cá nhân</Text>
-        {/* Chừa 1 view để icon canh giữa */}
-        <View style={{ width: 24 }} />
+    <SafeAreaView style={[styles.container, { backgroundColor: BG }]}>      
+      <View style={[styles.topBar, { backgroundColor: CARD }]}>        
+        <TouchableOpacity onPress={() => navigation.goBack()}>          
+          <Ionicons name="chevron-back" size={28} color={TEXT} />        
+        </TouchableOpacity>        
+        <Text style={[styles.topBarTitle, { color: TEXT }]}>Chỉnh sửa thông tin</Text>        
+        <View style={{ width: 28 }} />      
       </View>
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-        {/* Phần trên (ảnh đại diện, nền màu) */}
-        <View style={styles.headerContainer}>
-          <Image source={{ uri: userAvatar }} style={styles.avatar} />
-          <TouchableOpacity onPress={handleChangeAvatar}>
-            <Text style={styles.changeAvatarText}>Thay đổi ảnh đại diện</Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity onPress={pickImage} style={styles.avatarContainer}>
+          <Image
+            source={
+              avatar
+                ? { uri: avatar.uri }
+                : avatarPreview
+                ? { uri: avatarPreview }
+                : require("../assets/user.png")
+            }
+            style={styles.avatar}
+          />
+          <Text style={[styles.changeAvatarText, { color: ACCENT }]}>Thay đổi ảnh đại diện</Text>
+        </TouchableOpacity>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: TEXT }]}>Họ và tên</Text>
+          <TextInput
+            style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]}
+            value={fullName}
+            onChangeText={setFullName}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: TEXT }]}>Email</Text>
+          <TextInput
+            style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]}
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: TEXT }]}>Số điện thoại</Text>
+          <TextInput
+            style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: TEXT }]}>Giới tính</Text>
+          <Picker
+            selectedValue={gender}
+            onValueChange={(value) => setGender(value)}
+            style={{ color: TEXT, backgroundColor: CARD }}
+          >
+            <Picker.Item label="Nam" value="male" />
+            <Picker.Item label="Nữ" value="female" />
+            <Picker.Item label="Khác" value="other" />
+          </Picker>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, { color: TEXT }]}>Ngày sinh</Text>
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(true)}
+            style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD }]}
+          >
+            <Text style={{ color: TEXT }}>{dob.toLocaleDateString()}</Text>
           </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={dob}
+              mode="date"
+              display="default"
+              maximumDate={new Date()}
+              onChange={(e, date) => {
+                setShowDatePicker(false);
+                if (date) setDob(date);
+              }}
+            />
+          )}
         </View>
 
-        {/* Thông tin chi tiết */}
-        <View style={styles.infoContainer}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Họ và tên</Text>
-            <Text style={styles.infoValue}>{userName}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Số điện thoại</Text>
-            <Text style={styles.infoValue}>{userPhone}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Giới tính</Text>
-            <Text style={styles.infoValue}>{userGender}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Ngày sinh</Text>
-            <Text style={styles.infoValue}>{userBirthday}</Text>
-          </View>
-        </View>
-
-        {/* Nút Chỉnh sửa */}
-        <TouchableOpacity style={styles.editButton} onPress={handleEditInfo}>
-          <Text style={styles.editButtonText}>Chỉnh sửa thông tin</Text>
+        <TouchableOpacity
+          style={[styles.saveButton, { backgroundColor: ACCENT }]}
+          onPress={handleSave}
+        >
+          <Text style={[styles.saveButtonText, { color: BG }]}>Lưu thay đổi</Text>
         </TouchableOpacity>
-
-        {/* Khoảng trống */}
-        <View style={{ height: 80 }} />
       </ScrollView>
-
-      {/* Thanh Tab Bar ở dưới */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabButton} onPress={goToHome}>
-          <Ionicons name="home" size={24} color="#888" />
-          <Text style={styles.tabText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.tabButton} onPress={goToCart}>
-          <Ionicons name="cart-outline" size={24} color="#888" />
-          <Text style={styles.tabText}>Cart</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.tabButton} onPress={goToLiked}>
-          <Ionicons name="heart-outline" size={24} color="#888" />
-          <Text style={styles.tabText}>Liked</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.tabButton} onPress={goToProfile}>
-          <Ionicons name="person-outline" size={24} color="#888" />
-          <Text style={styles.tabText}>Profile</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
-};
-
-export default ProfileInfoScreen;
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  // Thanh top bar
+  container: { flex: 1 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    backgroundColor: "#fff",
     justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   topBarTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#000",
   },
-  backButton: {
-    paddingRight: 10,
-  },
-
-  // Header container
-  headerContainer: {
-    backgroundColor: "gray",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 16,
-  },
-  avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "#ccc",
-    marginBottom: 8,
-  },
-  changeAvatarText: {
-    fontSize: 14,
-    color: "#fff",
-    textDecorationLine: "underline",
-  },
-
-  // Info container
-  infoContainer: {
-    backgroundColor: "#fff",
-    marginTop: 20,
-    paddingHorizontal: 16,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: "#666",
-  },
-  infoValue: {
-    fontSize: 14,
-    color: "#333",
-    fontWeight: "500",
-  },
-
-  // Nút Chỉnh sửa
-  editButton: {
-    marginHorizontal: 16,
-    backgroundColor: "#333",
+  avatarContainer: { alignItems: "center", marginTop: 10, marginBottom: 20 },
+  avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: "#ccc" },
+  changeAvatarText: { marginTop: 8, fontSize: 14 },
+  inputGroup: { marginBottom: 16, paddingHorizontal: 16 },
+  label: { fontSize: 14, fontWeight: "600", marginBottom: 6 },
+  input: {
+    borderWidth: 1,
     borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 30,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
   },
-  editButtonText: {
-    color: "#fff",
+  saveButton: {
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 24,
+    marginHorizontal: 16,
+  },
+  saveButtonText: {
     fontSize: 16,
     fontWeight: "bold",
   },
-
-  // Tab Bar
-  tabBar: {
-    flexDirection: "row",
-    height: 70,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
-    alignItems: "center",
-    justifyContent: "space-around",
-  },
-  tabButton: {
-    alignItems: "center",
+  loadingContainer: {
+    flex: 1,
     justifyContent: "center",
-  },
-  tabText: {
-    fontSize: 12,
-    color: "#888",
-    marginTop: 4,
+    alignItems: "center",
   },
 });

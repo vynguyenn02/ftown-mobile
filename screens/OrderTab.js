@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/screens/OrderTab.js
+import React, { useEffect, useState, useContext } from "react";
 import {
   View,
   Text,
@@ -10,82 +11,105 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import orderApi from "../api/orderApi.js";
+import orderApi from "../api/orderApi";
+import { ThemeContext } from "../context/ThemeContext";
 
 export default function OrderTab({ status }) {
+  const { theme } = useContext(ThemeContext);
+  const containerBg = theme.mode === "dark" ? "#181818" : theme.background;
+  const cardBg = theme.mode === "dark" ? "#2A2A2A" : theme.card;
+
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [pageNumber, setPageNumber] = useState(1);
+  const pageSize = 10;
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation();
 
+  // Reset khi đổi tab/status
   useEffect(() => {
-    fetchOrders();
+    setOrders([]);
+    setPageNumber(1);
   }, [status]);
 
-  const fetchOrders = async () => {
-    try {
+  // Fetch dữ liệu khi status hoặc page thay đổi
+  useEffect(() => {
+    let isActive = true;
+    (async () => {
       setLoading(true);
-      const accountId = await AsyncStorage.getItem("accountId");
-      const response = await orderApi.getOrdersByStatus(status, accountId);
-      if (response.data.status) {
-        setOrders(response.data.data);
+      try {
+        const accountId = await AsyncStorage.getItem("accountId");
+        const resp = await orderApi.getOrdersByStatus(
+          status,
+          accountId,
+          pageNumber,
+          pageSize
+        );
+  
+        console.log("📦 Status:", status);
+        console.log("🧾 Response:", resp);
+  
+        // ✅ FIXED: axios trả về .data chứa status và data.items
+        if (resp.data.status && isActive) {
+          const { items, totalCount, pageSize: ps } = resp.data.data;
+  
+          console.log("✅ ITEMS RETURNED:", items.length);
+  
+          setOrders((prev) => {
+            const newOrders = pageNumber === 1 ? items : [...prev, ...items];
+            console.log("✅ SET ORDERS:", newOrders.length);
+            return newOrders;
+          });
+  
+          setTotalPages(Math.ceil(totalCount / ps));
+        }
+      } catch (e) {
+        console.error("❌ Lỗi fetch đơn:", e);
+      } finally {
+        if (isActive) setLoading(false);
       }
-    } catch (error) {
-      console.log("Lỗi fetch đơn:", error);
-    } finally {
-      setLoading(false);
+    })();
+    return () => {
+      isActive = false;
+    };
+  }, [status, pageNumber]);
+
+  const handleLoadMore = () => {
+    if (!loading && pageNumber < totalPages) {
+      setPageNumber((prev) => prev + 1);
     }
+  };
+
+  const renderFooter = () => {
+    if (!loading) return null;
+    return <ActivityIndicator style={{ marginVertical: 16 }} color={theme.primary} />;
   };
 
   const ColorDot = ({ color }) => (
     <View style={[styles.colorDot, { backgroundColor: color || "#ccc" }]} />
   );
 
-  const renderItem = ({ item }) => {
-    const total = (item.subTotal || 0) + (item.shippingCost || 0);
-
-    return (
-      <TouchableOpacity onPress={() => navigation.navigate("OrderDetailScreen", { orderId: item.orderId })}>
-        <View style={styles.card}>
-          <View style={styles.headerRow}>
-            <Text style={styles.orderId}>Đơn hàng #{item.orderId}</Text>
-            <Text style={[styles.statusBadge, getStatusColorStyle(item.status)]}>
-              {translateStatus(item.status)}
-            </Text>
-          </View>
-          {item.items.map((detail, idx) => (
-            <View key={idx} style={styles.itemRow}>
-              {detail.imageUrl && (
-                <Image source={{ uri: detail.imageUrl }} style={styles.image} />
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.productName}>{detail.productName || "Sản phẩm"}</Text>
-                <View style={styles.colorRow}>
-                  <Text style={styles.meta}>Size: {detail.size || "N/A"}</Text>
-                  <View style={styles.colorWrap}>
-                    <Text style={styles.meta}>Màu:</Text>
-                    <ColorDot color={detail.color} />
-                  </View>
-                </View>
-                <Text style={styles.meta}>Số lượng: {detail.quantity}</Text>
-                <Text style={styles.meta}>
-                  Giá: {(detail.priceAtPurchase || 0).toLocaleString()}đ
-                </Text>
-              </View>
-            </View>
-          ))}
-
-          <Text style={styles.meta}>
-            Phí vận chuyển: {(item.shippingCost || 0).toLocaleString()}đ
-          </Text>
-          <Text style={styles.total}>
-            Tổng số tiền: {total.toLocaleString()}đ
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
+  const translateStatus = (s) => {
+    switch (s?.toLowerCase()) {
+      case "completed":
+        return "Hoàn thành";
+      case "shipped":
+        return "Đã giao";
+      case "pending confirmed":
+        return "Chờ xác nhận";
+      case "pendingpayment":
+        return "Chờ thanh toán";
+      case "confirmed":
+        return "Đã xác nhận";
+      case "canceled":
+        return "Đã huỷ";
+      default:
+        return s;
+    }
   };
-  const getStatusColorStyle = (status) => {
-    switch (status?.toLowerCase()) {
+
+  const getStatusColorStyle = (s) => {
+    switch (s?.toLowerCase()) {
       case "completed":
         return { backgroundColor: "#e0f8ec", color: "#1aa260" };
       case "shipped":
@@ -100,44 +124,105 @@ export default function OrderTab({ status }) {
         return { backgroundColor: "#eee", color: "#555" };
     }
   };
-  const translateStatus = (status) => {
-    switch (status?.toLowerCase()) {
-      case "completed":
-        return "Hoàn thành";
-      case "shipped":
-        return "Đã giao";
-      case "pending confirmed":
-        return "Chờ xác nhận";
-      case "pendingpayment":
-        return "Chờ thanh toán";
-      case "confirmed":
-        return "Đã xác nhận";
-      case "canceled":
-        return "Đã huỷ";
-      default:
-        return status;
-    }
+
+  const renderItem = ({ item }) => {
+    const total = (item.subTotal || 0) + (item.shippingCost || 0);
+    return (
+      <TouchableOpacity
+        onPress={() =>
+          navigation.navigate("OrderDetailScreen", { orderId: item.orderId })
+        }
+      >
+        <View style={[styles.card, { backgroundColor: cardBg }]}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.orderId, { color: theme.text }]}>
+              Đơn hàng #{item.orderId}
+            </Text>
+            <Text
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: getStatusColorStyle(item.status).backgroundColor,
+                  color: getStatusColorStyle(item.status).color,
+                },
+              ]}
+            >
+              {translateStatus(item.status)}
+            </Text>
+          </View>
+
+          {item.items.map((d, i) => (
+            <View key={i} style={styles.itemRow}>
+              {d.imageUrl && (
+                <Image source={{ uri: d.imageUrl }} style={styles.image} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.productName, { color: theme.text }]}>
+                  {d.productName || "Sản phẩm"}
+                </Text>
+                <View style={styles.colorRow}>
+                  <Text style={[styles.meta, { color: theme.subtext }]}>
+                    Size: {d.size || "N/A"}
+                  </Text>
+                  <View style={styles.colorWrap}>
+                    <Text style={[styles.meta, { color: theme.subtext }]}>Màu:</Text>
+                    <ColorDot color={d.color} />
+                  </View>
+                </View>
+                <Text style={[styles.meta, { color: theme.subtext }]}>
+                  Số lượng: {d.quantity}
+                </Text>
+                <Text style={[styles.meta, { color: theme.subtext }]}>
+                  Giá: {d.priceAtPurchase?.toLocaleString() || 0}đ
+                </Text>
+              </View>
+            </View>
+          ))}
+
+          <Text style={[styles.meta, { color: theme.subtext }]}>
+            Phí vận chuyển: {item.shippingCost?.toLocaleString() || 0}đ
+          </Text>
+          <Text style={[styles.total, { color: theme.text }]}>
+            Tổng tiền: {total.toLocaleString()}đ
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
   };
-  return loading ? (
-    <ActivityIndicator size="large" color="#FF3B30" style={{ marginTop: 20 }} />
-  ) : (
+
+  if (loading && pageNumber === 1) {
+    return (
+      <View style={[styles.loadingWrap, { backgroundColor: containerBg }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
+  return (
     <FlatList
+      style={{ backgroundColor: containerBg }}
       data={orders}
       keyExtractor={(item) => item.orderId.toString()}
       renderItem={renderItem}
       contentContainerStyle={{ padding: 16 }}
+      onEndReached={handleLoadMore}
+      onEndReachedThreshold={0.5}
+      ListFooterComponent={renderFooter}
       ListEmptyComponent={
-        <Text style={{ textAlign: "center", marginTop: 20 }}>
-          Không có đơn nào.
-        </Text>
+        !loading && (
+          <Text style={[styles.emptyText, { color: theme.subtext }]}>
+            Không có đơn nào.
+          </Text>
+        )
       }
     />
   );
 }
 
 const styles = StyleSheet.create({
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
+  emptyText: { textAlign: "center", marginTop: 20 },
   card: {
-    backgroundColor: "#fff",
     borderRadius: 10,
     padding: 14,
     marginBottom: 12,
@@ -146,63 +231,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  orderId: {
-    fontWeight: "bold",
-    marginBottom: 6,
-    fontSize: 14,
-    color: "#000",
-  },
-  itemRow: {
-    flexDirection: "row",
-    marginBottom: 10,
-    gap: 10,
-  },
-  image: {
-    width: 70,
-    height: 70,
-    borderRadius: 8,
-    backgroundColor: "#eee",
-  },
-  productName: {
-    fontWeight: "bold",
-    fontSize: 14,
-    marginBottom: 4,
-    color: "#333",
-  },
-  meta: {
-    fontSize: 13,
-    color: "#555",
-  },
-  colorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 2,
-    gap: 10,
-  },
-  colorWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  colorDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  total: {
-    fontWeight: "bold",
-    marginTop: 6,
-    fontSize: 14,
-    color: "#000",
-  },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 6,
   },
+  orderId: { fontSize: 14, fontWeight: "bold" },
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -211,4 +246,31 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textTransform: "capitalize",
   },
+  itemRow: {
+    flexDirection: "row",
+    marginBottom: 10,
+    alignItems: "center",
+  },
+  image: { width: 70, height: 70, borderRadius: 8, backgroundColor: "#eee" },
+  productName: { fontSize: 14, fontWeight: "bold", marginBottom: 4 },
+  colorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  colorWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 12,
+  },
+  meta: { fontSize: 13 },
+  colorDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    marginLeft: 4,
+  },
+  total: { fontSize: 14, fontWeight: "bold", marginTop: 6 },
 });
