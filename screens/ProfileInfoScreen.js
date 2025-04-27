@@ -10,10 +10,10 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Picker } from "@react-native-picker/picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import profileApi from "../api/profileApi";
@@ -33,6 +33,7 @@ export default function ProfileInfoScreen({ navigation }) {
   const [gender, setGender] = useState("female");
   const [dob, setDob] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [genderModalVisible, setGenderModalVisible] = useState(false);
   const [avatar, setAvatar] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [accountId, setAccountId] = useState(null);
@@ -78,6 +79,12 @@ export default function ProfileInfoScreen({ navigation }) {
     return `${yyyy}-${mm}-${dd}`;
   };
 
+  const getGenderLabel = (g) => {
+    if (g === "male") return "Nam";
+    if (g === "female") return "Nữ";
+    return "Khác";
+  };
+
   const handleSave = async () => {
     try {
       if (!accountId) throw new Error("Không tìm thấy accountId");
@@ -87,13 +94,11 @@ export default function ProfileInfoScreen({ navigation }) {
       }
 
       const formData = new FormData();
-      formData.append("FullName", fullName.toString());
-      formData.append("Email", email.toString());
-      formData.append("PhoneNumber", phone.toString());
+      formData.append("FullName", fullName);
+      formData.append("Email", email);
+      formData.append("PhoneNumber", phone);
       formData.append("DateOfBirth", formatDate(dob));
-      const mappedGender =
-        gender === "Nam" ? "male" : gender === "Nữ" ? "female" : "other";
-      formData.append("Gender", mappedGender.toString());
+      formData.append("Gender", gender);
 
       if (avatar?.uri && avatar.uri.startsWith("file://")) {
         formData.append("AvatarImage", {
@@ -123,10 +128,10 @@ export default function ProfileInfoScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: BG }]}>      
       <View style={[styles.topBar, { backgroundColor: CARD }]}>        
-        <TouchableOpacity onPress={() => navigation.goBack()}>          
-          <Ionicons name="chevron-back" size={28} color={TEXT} />        
-        </TouchableOpacity>        
-        <Text style={[styles.topBarTitle, { color: TEXT }]}>Chỉnh sửa thông tin</Text>        
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={28} color={TEXT} />
+        </TouchableOpacity>
+        <Text style={[styles.topBarTitle, { color: TEXT }]}>Chỉnh sửa thông tin</Text>
         <View style={{ width: 28 }} />      
       </View>
 
@@ -176,16 +181,47 @@ export default function ProfileInfoScreen({ navigation }) {
 
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: TEXT }]}>Giới tính</Text>
-          <Picker
-            selectedValue={gender}
-            onValueChange={(value) => setGender(value)}
-            style={{ color: TEXT, backgroundColor: CARD }}
+          <TouchableOpacity
+            onPress={() => setGenderModalVisible(true)}
+            style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD }]}
           >
-            <Picker.Item label="Nam" value="male" />
-            <Picker.Item label="Nữ" value="female" />
-            <Picker.Item label="Khác" value="other" />
-          </Picker>
+            <Text style={{ color: TEXT }}>{getGenderLabel(gender)}</Text>
+          </TouchableOpacity>
         </View>
+
+        <Modal
+          visible={genderModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setGenderModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPressOut={() => setGenderModalVisible(false)}
+          >
+            <View style={[styles.modalContent, { backgroundColor: CARD }]}>                   
+              {['male','female','other'].map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={styles.modalOptionContainer}
+                  onPress={() => {
+                    setGender(g);
+                    setGenderModalVisible(false);
+                  }}
+                >
+                  <Text style={[styles.modalOption, { color: TEXT }]}>{getGenderLabel(g)}</Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.modalCancelContainer}
+                onPress={() => setGenderModalVisible(false)}
+              >
+                <Text style={[styles.modalCancel, { color: ACCENT }]}>Hủy</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
 
         <View style={styles.inputGroup}>
           <Text style={[styles.label, { color: TEXT }]}>Ngày sinh</Text>
@@ -229,10 +265,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
   },
-  topBarTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+  topBarTitle: { fontSize: 18, fontWeight: "bold" },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   avatarContainer: { alignItems: "center", marginTop: 10, marginBottom: 20 },
   avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: "#ccc" },
   changeAvatarText: { marginTop: 8, fontSize: 14 },
@@ -245,20 +279,22 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
   },
-  saveButton: {
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 24,
-    marginHorizontal: 16,
-  },
-  saveButtonText: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  loadingContainer: {
+  saveButton: { paddingVertical: 14, borderRadius: 8, alignItems: "center", marginTop: 24, marginHorizontal: 16 },
+  saveButtonText: { fontSize: 16, fontWeight: "bold" },
+  modalOverlay: {
     flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",
   },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "white",
+    borderRadius: 12,
+    paddingVertical: 20,
+  },
+  modalOptionContainer: { paddingVertical: 12 },
+  modalOption: { fontSize: 16, textAlign: "center" },
+  modalCancelContainer: { paddingVertical: 14 },
+  modalCancel: { fontSize: 16, textAlign: "center", fontWeight: "bold" },
 });

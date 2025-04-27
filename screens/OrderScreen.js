@@ -51,18 +51,20 @@ const OrderScreen = () => {
     }
   }, [route.params]);
 
-  const renderScene = ({ route }) => {
+  const renderScene = ({ route: { key } }) => {
     const mapStatus = {
       pendingconfirmed: "Pending Confirmed",
       pendingpayment: "PendingPayment",
       confirmed: "Confirmed",
       shipped: "Shipped",
       completed: "Completed",
-      returnrequested:  "Return Requested",
+      returnrequested: "Return Requested",
       canceled: "Canceled",
     };
-    return <OrderTab status={mapStatus[route.key]} />;
+    const status = mapStatus[key];
+    return <OrderTab status={status} />;
   };
+  
   
 
   return (
@@ -91,17 +93,20 @@ const OrderScreen = () => {
         renderScene={renderScene}
         onIndexChange={setIndex}
         initialLayout={{ width: layout.width }}
-        renderTabBar={(props) => (
-          <TabBar
-            {...props}
-            scrollEnabled
-            indicatorStyle={{ backgroundColor: theme.primary }}
-            style={{ backgroundColor: containerBg, elevation: 0 }}
-            activeColor={theme.primary}
-            inactiveColor={theme.subtext}
-            labelStyle={{ fontWeight: "bold", textTransform: "none" }}
-          />
-        )}
+        renderTabBar={(tabBarProps) => {
+          // ❌ Không destructure `props`, vì key vẫn bị lan ra!
+          return (
+            <TabBar
+              {...tabBarProps}
+              scrollEnabled
+              indicatorStyle={{ backgroundColor: theme.primary }}
+              style={{ backgroundColor: containerBg, elevation: 0 }}
+              activeColor={theme.primary}
+              inactiveColor={theme.subtext}
+              labelStyle={{ fontWeight: "bold", textTransform: "none" }}
+            />
+          );
+        }}
       />
     </SafeAreaView>
   );
