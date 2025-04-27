@@ -77,7 +77,7 @@ Toast.show({
       if (!userId || !token || !mounted) return;
 
       try {
-        const url = `https://db62-116-110-41-44.ngrok-free.app/notifications/user/${userId}`;
+        const url = `https://ftapigatewayservice.azurewebsites.net/notifications/user/${userId}`;
         console.log("🔗 Gọi API:", url);
 
         const res = await fetch(url);

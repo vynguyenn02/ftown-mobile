@@ -4,7 +4,7 @@ let connection = null;
 
 export const connectNotificationHub = (token, onReceiveNotification) => {
   connection = new HubConnectionBuilder()
-    .withUrl("https://db62-116-110-41-44.ngrok-free.app/notificationHub", {
+    .withUrl("https://ftapigatewayservice.azurewebsites.net/notificationHub", {
       accessTokenFactory: () => token,
     })
     .configureLogging(LogLevel.Information)

@@ -1,5 +1,4 @@
-// screens/CreateAddressScreen.js
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef, useMemo } from "react";
 import {
   SafeAreaView,
   View,
@@ -10,11 +9,15 @@ import {
   ScrollView,
   Alert,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
+  FlatList,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
-import RNPickerSelect from "react-native-picker-select";
 import axios from "axios";
+import BottomSheet from "@gorhom/bottom-sheet";
 import addressApi from "../api/addressApi";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemeContext } from "../context/ThemeContext";
@@ -41,9 +44,16 @@ export default function CreateAddressScreen() {
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
 
+  // bottom sheet refs & state
+  const bottomSheetRef = useRef(null);
+  const snapPoints = useMemo(() => ["50%"], []);
+  const [pickerData, setPickerData] = useState([]);
+  const [pickerKey, setPickerKey] = useState("");
+  const [pickerTitle, setPickerTitle] = useState("");
+
   useEffect(() => {
     axios.get("https://provinces.open-api.vn/api/p/").then((res) => {
-      const opts = res.data.map((p) => ({ label: p.name, value: p.code, name: p.name }));
+      const opts = res.data.map((p) => ({ label: p.name, value: String(p.code) }));
       setProvinces(opts);
     });
   }, []);
@@ -53,8 +63,9 @@ export default function CreateAddressScreen() {
       axios
         .get(`https://provinces.open-api.vn/api/p/${form.province}?depth=2`)
         .then((res) => {
-          const opts = res.data.districts.map((d) => ({ label: d.name, value: d.code, name: d.name }));
-          setDistricts(opts);
+          setDistricts(
+            res.data.districts.map((d) => ({ label: d.name, value: String(d.code) }))
+          );
           setForm((prev) => ({ ...prev, district: "", ward: "" }));
         });
     }
@@ -65,14 +76,13 @@ export default function CreateAddressScreen() {
       axios
         .get(`https://provinces.open-api.vn/api/d/${form.district}?depth=2`)
         .then((res) => {
-          const opts = res.data.wards.map((w) => ({ label: w.name, value: w.code, name: w.name }));
-          setWards(opts);
+          setWards(res.data.wards.map((w) => ({ label: w.name, value: String(w.code) })));
           setForm((prev) => ({ ...prev, ward: "" }));
         });
     }
   }, [form.district]);
 
-  const handleChange = (key, val) => setForm({ ...form, [key]: val });
+  const handleChange = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
 
   const validate = () => {
     const errs = {};
@@ -95,15 +105,18 @@ export default function CreateAddressScreen() {
 
   const handleSubmit = async () => {
     const accountId = await AsyncStorage.getItem("accountId");
-    if (!accountId) return Alert.alert("Lỗi", "Không tìm thấy tài khoản");
+    if (!accountId) {
+      Alert.alert("Lỗi", "Không tìm thấy tài khoản");
+      return;
+    }
     if (!validate()) return;
 
     try {
-      const selProv = provinces.find((p) => p.value === form.province)?.name;
-      const selDist = districts.find((d) => d.value === form.district)?.name;
-      const selWard = wards.find((w) => w.value === form.ward)?.name;
+      const selProv = provinces.find((p) => p.value === form.province)?.label;
+      const selDist = districts.find((d) => d.value === form.district)?.label;
+      const selWard = wards.find((w) => w.value === form.ward)?.label;
 
-      const payload = {
+      await addressApi.createAddress({
         accountId: Number(accountId),
         recipientName: form.recipientName,
         recipientPhone: form.recipientPhone,
@@ -114,9 +127,7 @@ export default function CreateAddressScreen() {
         city: selWard,
         country: form.country,
         isDefault: form.isDefault,
-      };
-
-      await addressApi.createAddress(payload);
+      });
       Alert.alert("Thành công", "Đã thêm địa chỉ");
       navigation.goBack();
     } catch (e) {
@@ -125,170 +136,161 @@ export default function CreateAddressScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>      
-      <View style={[styles.header, { borderBottomColor: theme.subtext }]}>        
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={24} color={theme.text} />
+  const openPicker = (key, data, title) => {
+    setPickerKey(key);
+    setPickerData(data);
+    setPickerTitle(title);
+    Keyboard.dismiss();
+    bottomSheetRef.current?.expand();
+  };
+
+  const onSelectItem = (item) => {
+    handleChange(pickerKey, item.value);
+    bottomSheetRef.current?.close();
+  };
+
+  const renderPickerInput = (key, placeholder, data, error) => {
+    const selected = data.find((d) => d.value === form[key]);
+    return (
+      <View>
+        <TouchableOpacity
+          style={[styles.input, { backgroundColor: cardBg, borderColor: theme.subtext }]}
+          onPress={() => openPicker(key, data, placeholder)}
+        >
+          <Text style={{ color: selected ? theme.text : theme.subtext, flex: 1 }}>
+            {selected?.label || placeholder}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color={theme.subtext} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Thêm địa chỉ</Text>
+        {error && <Text style={styles.error}>{error}</Text>}
       </View>
-      <ScrollView contentContainerStyle={styles.form}>
-        {/* Recipient Name */}
-        <TextInput
-          style={[styles.input, { backgroundColor: cardBg, color: theme.text, borderColor: theme.subtext }]}
-          placeholder="Tên người nhận"
-          placeholderTextColor={theme.subtext}
-          value={form.recipientName}
-          onChangeText={(t) => handleChange("recipientName", t)}
-        />
-        {errors.recipientName && <Text style={styles.error}>{errors.recipientName}</Text>}
+    );
+  };
 
-        {/* Phone */}
-        <TextInput
-          style={[styles.input, { backgroundColor: cardBg, color: theme.text, borderColor: theme.subtext }]}
-          placeholder="Số điện thoại"
-          placeholderTextColor={theme.subtext}
-          keyboardType="phone-pad"
-          value={form.recipientPhone}
-          onChangeText={(t) => handleChange("recipientPhone", t)}
-        />
-        {errors.recipientPhone && <Text style={styles.error}>{errors.recipientPhone}</Text>}
-
-        {/* Email */}
-        <TextInput
-          style={[styles.input, { backgroundColor: cardBg, color: theme.text, borderColor: theme.subtext }]}
-          placeholder="Email"
-          placeholderTextColor={theme.subtext}
-          keyboardType="email-address"
-          value={form.email}
-          onChangeText={(t) => handleChange("email", t)}
-        />
-        {errors.email && <Text style={styles.error}>{errors.email}</Text>}
-
-        {/* Address */}
-        <TextInput
-          style={[styles.input, { backgroundColor: cardBg, color: theme.text, borderColor: theme.subtext }]}
-          placeholder="Địa chỉ cụ thể"
-          placeholderTextColor={theme.subtext}
-          value={form.address}
-          onChangeText={(t) => handleChange("address", t)}
-        />
-        {errors.address && <Text style={styles.error}>{errors.address}</Text>}
-
-        {/* Province Picker */}
-        <RNPickerSelect
-          placeholder={{ label: "Chọn tỉnh/thành", value: null }}
-          items={provinces}
-          onValueChange={(v) => handleChange("province", v)}
-          value={form.province}
-          style={pickerStyles(theme)}
-        />
-        {errors.province && <Text style={styles.error}>{errors.province}</Text>}
-
-        {/* District */}
-        <RNPickerSelect
-          placeholder={{ label: "Chọn quận/huyện", value: null }}
-          items={districts}
-          onValueChange={(v) => handleChange("district", v)}
-          value={form.district}
-          style={pickerStyles(theme)}
-        />
-        {errors.district && <Text style={styles.error}>{errors.district}</Text>}
-
-        {/* Ward */}
-        <RNPickerSelect
-          placeholder={{ label: "Chọn phường/xã", value: null }}
-          items={wards}
-          onValueChange={(v) => handleChange("ward", v)}
-          value={form.ward}
-          style={pickerStyles(theme)}
-        />
-        {errors.ward && <Text style={styles.error}>{errors.ward}</Text>}
-
-        {/* Default Switch */}
-        <View style={styles.switchRow}>
-          <Text style={[styles.switchLabel, { color: theme.text }]}>Đặt làm mặc định</Text>
-          <Switch
-            value={form.isDefault}
-            onValueChange={(v) => handleChange("isDefault", v)}
-            // khi tắt: track màu xám sáng, khi bật: track màu chủ đạo
-            trackColor={{ false: "#BBB", true: theme.primary }}
-            // riêng iOS background khi off
-            ios_backgroundColor="#BBB"
-            // thumb luôn cùng màu chủ đạo để nổi bật
-            thumbColor={theme.primary}
-            style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }} // tăng kích thước 10%
-          />
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.select({ ios: 60, android: 0 })}
+      style={{ flex: 1 }}
+    >
+      <SafeAreaView style={[styles.container, { backgroundColor: containerBg }]}>        
+        <View style={[styles.header, { borderBottomColor: theme.subtext }]}>          
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={24} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.text }]}>Thêm địa chỉ</Text>
         </View>
 
-        {/* Submit */}
-        <TouchableOpacity
-          style={[styles.submitBtn, { backgroundColor: theme.primary }]}
-          onPress={handleSubmit}
+        <ScrollView
+          contentContainerStyle={styles.form}
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode="on-drag"
         >
-          <Text style={[styles.submitText, { color: theme.background }]}>Hoàn tất</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          {/* Recipient Name */}
+          <TextInput
+            style={[styles.input, { backgroundColor: cardBg, color: theme.text, borderColor: theme.subtext }]}
+            placeholder="Tên người nhận"
+            placeholderTextColor={theme.subtext}
+            value={form.recipientName}
+            onChangeText={(t) => handleChange("recipientName", t)}
+          />
+          {errors.recipientName && <Text style={styles.error}>{errors.recipientName}</Text>}
+
+          {/* Phone */}
+          <TextInput
+            style={[styles.input, { backgroundColor: cardBg, color: theme.text, borderColor: theme.subtext }]}
+            placeholder="Số điện thoại"
+            placeholderTextColor={theme.subtext}
+            keyboardType="phone-pad"
+            value={form.recipientPhone}
+            onChangeText={(t) => handleChange("recipientPhone", t)}
+          />
+          {errors.recipientPhone && <Text style={styles.error}>{errors.recipientPhone}</Text>}
+
+          {/* Email */}
+          <TextInput
+            style={[styles.input, { backgroundColor: cardBg, color: theme.text, borderColor: theme.subtext }]}
+            placeholder="Email"
+            placeholderTextColor={theme.subtext}
+            keyboardType="email-address"
+            value={form.email}
+            onChangeText={(t) => handleChange("email", t)}
+          />
+          {errors.email && <Text style={styles.error}>{errors.email}</Text>}
+
+          {/* Address */}
+          <TextInput
+            style={[styles.input, { backgroundColor: cardBg, color: theme.text, borderColor: theme.subtext }]}
+            placeholder="Địa chỉ cụ thể"
+            placeholderTextColor={theme.subtext}
+            value={form.address}
+            onChangeText={(t) => handleChange("address", t)}
+          />
+          {errors.address && <Text style={styles.error}>{errors.address}</Text>}
+
+          {/* Pickers */}
+          {renderPickerInput("province", "Chọn tỉnh/thành", provinces, errors.province)}
+          {renderPickerInput("district", "Chọn quận/huyện", districts, errors.district)}
+          {renderPickerInput("ward", "Chọn phường/xã", wards, errors.ward)}
+
+          {/* Default Switch */}
+          <View style={styles.switchRow}>
+            <Text style={[styles.switchLabel, { color: theme.text }]}>Đặt làm mặc định</Text>
+            <Switch
+              value={form.isDefault}
+              onValueChange={(v) => handleChange("isDefault", v)}
+              trackColor={{ false: "#BBB", true: theme.primary }}
+              ios_backgroundColor="#BBB"
+              thumbColor={theme.primary}
+              style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }] }}
+            />
+          </View>
+
+          {/* Submit */}
+          <TouchableOpacity style={[styles.submitBtn, { backgroundColor: theme.primary }]} onPress={handleSubmit}>
+            <Text style={[styles.submitText, { color: theme.background }]}>Hoàn tất</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* Bottom Sheet Picker */}
+        <BottomSheet
+          ref={bottomSheetRef}
+          index={-1}                // ← bắt đầu đóng hoàn toàn
+          snapPoints={snapPoints}
+          enablePanDownToClose={true}
+          animateOnMount={false}    // (tuỳ chọn) bỏ animation khi mount
+        >
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: theme.text }]}>{pickerTitle}</Text>
+          </View>
+          <FlatList
+            data={pickerData}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.sheetItem} onPress={() => onSelectItem(item)}>
+                <Text style={[styles.sheetItemText, { color: theme.text }]}>{item.label}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        </BottomSheet>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   headerTitle: { fontSize: 18, fontWeight: "bold", marginLeft: 12 },
   form: { padding: 16, paddingBottom: 40 },
-  input: {
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 8,
-  },
+  input: { flexDirection: "row", alignItems: "center", padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
   error: { color: "#FF3B30", fontSize: 13, marginBottom: 8 },
-  switchRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginVertical: 12,
-  },
+  switchRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 12 },
   switchLabel: { fontSize: 16 },
-  submitBtn: {
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 16,
-  },
+  submitBtn: { padding: 16, borderRadius: 8, alignItems: "center", marginTop: 16 },
   submitText: { fontSize: 16, fontWeight: "bold" },
-});
-
-const pickerStyles = (theme) => ({
-  inputIOS: {
-    fontSize: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: theme.subtext,
-    borderRadius: 8,
-    marginBottom: 8,
-    color: theme.text,
-    backgroundColor: theme.card,
-  },
-  inputAndroid: {
-    fontSize: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: theme.subtext,
-    borderRadius: 8,
-    marginBottom: 8,
-    color: theme.text,
-    backgroundColor: theme.card,
-  },
+  sheetHeader: { padding: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#ccc" },
+  sheetTitle: { fontSize: 16, fontWeight: "600" },
+  sheetItem: { paddingVertical: 12, paddingHorizontal: 16 },
+  sheetItemText: { fontSize: 16 },
 });
