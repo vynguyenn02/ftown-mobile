@@ -8,12 +8,14 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  StatusBar,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import orderApi from "../api/orderApi";
 import { ThemeContext } from "../context/ThemeContext";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ReturnRequestScreen() {
   const { theme } = useContext(ThemeContext);
@@ -56,14 +58,17 @@ export default function ReturnRequestScreen() {
 
   const renderItem = ({ item }) => {
     const isSelected = selectedItems[item.orderDetailId];
-  
+
     return (
       <View style={[styles.card, { backgroundColor: card }]}>
         <View style={styles.rowTop}>
           <TouchableOpacity
             style={[
               styles.circleBtn,
-              { borderColor: isSelected ? primary : "#aaa", backgroundColor: isSelected ? primary : "transparent" },
+              {
+                borderColor: isSelected ? primary : "#aaa",
+                backgroundColor: isSelected ? primary : "transparent",
+              },
             ]}
             onPress={() =>
               setSelectedItems({
@@ -72,19 +77,16 @@ export default function ReturnRequestScreen() {
               })
             }
           />
-  
-          <Text style={[styles.name, { color: text }]}>
-            {item.productName}
-          </Text>
+          <Text style={[styles.name, { color: text }]}>{item.productName}</Text>
         </View>
-  
+
         <View style={styles.row}>
           <Image source={{ uri: item.imageUrl }} style={styles.image} />
           <View style={styles.details}>
             <Text style={[styles.meta, { color: subtext }]}>Size: {item.size}</Text>
             <Text style={[styles.meta, { color: subtext }]}>Màu: {item.color}</Text>
             <Text style={[styles.meta, { color: subtext }]}>Số lượng đã mua: {item.quantity}</Text>
-  
+
             <View style={styles.inputRow}>
               <Text style={{ color: subtext }}>Số lượng đổi trả:</Text>
               <View style={styles.counter}>
@@ -101,11 +103,11 @@ export default function ReturnRequestScreen() {
                 >
                   <Ionicons name="remove-circle-outline" size={22} color={primary} />
                 </TouchableOpacity>
-  
+
                 <Text style={[styles.counterText, { color: text }]}>
                   {quantities[item.orderDetailId]}
                 </Text>
-  
+
                 <TouchableOpacity
                   style={styles.counterBtn}
                   onPress={() => {
@@ -126,7 +128,6 @@ export default function ReturnRequestScreen() {
       </View>
     );
   };
-  
 
   const handleSubmit = async () => {
     const selectedData = returnItems
@@ -135,21 +136,21 @@ export default function ReturnRequestScreen() {
         productVariantId: item.productVariantId,
         quantity: quantities[item.orderDetailId],
       }));
-  
+
     if (selectedData.length === 0) {
       Alert.alert("Thông báo", "Vui lòng chọn ít nhất một sản phẩm để đổi trả.");
       return;
     }
-  
+
     try {
       const accountId = await AsyncStorage.getItem("accountId");
-  
+
       const payload = {
         orderId: parseInt(orderId),
         accountId: parseInt(accountId),
         selectedItems: selectedData,
       };
-  
+
       const resp = await orderApi.checkoutReturnRequest(payload);
       if (resp.data) {
         navigation.navigate("ReturnCheckoutScreen", { checkoutData: resp.data });
@@ -159,10 +160,10 @@ export default function ReturnRequestScreen() {
       Alert.alert("Lỗi", "Không thể tạo phiên đổi trả.");
     }
   };
-  
 
   return (
-    <View style={[styles.container, { backgroundColor: background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: background }]}>
+      <StatusBar barStyle={theme.mode === "dark" ? "light-content" : "dark-content"} backgroundColor={background} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={text} />
@@ -191,7 +192,7 @@ export default function ReturnRequestScreen() {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -205,26 +206,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     elevation: 1,
   },
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  checkboxText: {
-    marginLeft: 8,
-    fontSize: 15,
-    fontWeight: "bold",
-  },
+  checkboxRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   row: { flexDirection: "row", alignItems: "flex-start" },
   image: { width: 70, height: 70, borderRadius: 6, backgroundColor: "#ccc" },
   details: { flex: 1, marginLeft: 10 },
   meta: { fontSize: 13, marginTop: 2 },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 10,
-  },
+  inputRow: { flexDirection: "row", alignItems: "center", marginTop: 10, gap: 10 },
   counter: {
     flexDirection: "row",
     alignItems: "center",
@@ -236,27 +223,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   counterBtn: { padding: 2 },
-  counterText: {
-    fontSize: 16,
-    fontWeight: "500",
-    minWidth: 30,
-    textAlign: "center",
-  },
+  counterText: { fontSize: 16, fontWeight: "500", minWidth: 30, textAlign: "center" },
   submitBtn: {
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
   },
-  submitText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  rowTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
+  submitText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  rowTop: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   circleBtn: {
     width: 18,
     height: 18,
@@ -264,5 +238,4 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     marginRight: 8,
   },
-  
 });

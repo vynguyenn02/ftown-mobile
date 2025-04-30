@@ -7,12 +7,14 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  StatusBar,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import orderApi from "../api/orderApi";
 import { ThemeContext } from "../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ReturnableScreen() {
   const { theme } = useContext(ThemeContext);
@@ -43,7 +45,7 @@ export default function ReturnableScreen() {
       <Text style={[styles.meta, { color: subtext }]}>
         Ngày giao: {item.deliveredDate ? new Date(item.deliveredDate).toLocaleString() : "Chưa cập nhật"}
       </Text>
-  
+
       {item.items.map((p, i) => (
         <View key={i} style={styles.itemRow}>
           <Image source={{ uri: p.imageUrl }} style={styles.image} />
@@ -55,9 +57,10 @@ export default function ReturnableScreen() {
       ))}
     </TouchableOpacity>
   );
-  
+
   return (
-    <View style={[styles.container, { backgroundColor: background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: background }]}>
+      <StatusBar barStyle={theme.mode === "dark" ? "light-content" : "dark-content"} backgroundColor={background} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={text} />
@@ -75,7 +78,7 @@ export default function ReturnableScreen() {
           contentContainerStyle={{ padding: 16 }}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

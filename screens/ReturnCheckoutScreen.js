@@ -12,6 +12,7 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -81,23 +82,27 @@ export default function ReturnCheckoutScreen() {
         const type = match ? `image/${match[1]}` : "image/jpeg";
         formData.append("MediaFiles", { uri, name: filename, type });
       });
-
+  
       const url = `${process.env.API_BASE_URL}/return-requests/submit-return-request`;
       const response = await fetch(url, {
         method: "POST",
         body: formData,
       });
       if (!response.ok) throw new Error(`Status ${response.status}`);
-
+  
       Alert.alert("✅ Thành công", "Yêu cầu đổi/trả đã được gửi.", [
         {
-            text: "OK",
-            onPress: () =>
-            navigation.navigate("OrderScreen", {
-            status: "Return Requested", // sẽ mở tab Đổi/Trả
+          text: "OK",
+          onPress: () =>
+            navigation.reset({
+              index: 1,
+              routes: [
+                { name: "HomeScreen" },
+                { name: "OrderScreen", params: { status: "Return Requested" } },
+              ],
             }),
         },
-    ]);
+      ]);
     } catch (err) {
       console.error(err);
       Alert.alert("❌ Lỗi", err.message || "Có lỗi xảy ra.");
@@ -105,9 +110,10 @@ export default function ReturnCheckoutScreen() {
       setLoading(false);
     }
   };
+  
 
   const renderProduct = ({ item }) => (
-    <View style={[styles.card, { backgroundColor: CARD }]}>      
+    <View style={[styles.card, { backgroundColor: CARD }]}>
       <Image source={{ uri: item.imageUrl }} style={styles.image} />
       <View style={styles.info}>
         <Text style={[styles.name, { color: TEXT }]}>{item.productName}</Text>
@@ -121,11 +127,23 @@ export default function ReturnCheckoutScreen() {
   const renderModal = (options, selected, setter, title, key) => (
     <Modal visible={modalVisible === key} transparent animationType="fade">
       <TouchableOpacity style={styles.overlay} onPress={() => setModalVisible(null)}>
-        <View style={[styles.modal, { backgroundColor: CARD }]}>          
+        <View style={[styles.modal, { backgroundColor: CARD }]}>
           <Text style={[styles.modalTitle, { color: TEXT }]}>{title}</Text>
           {options.map((opt, i) => (
-            <TouchableOpacity key={i} style={styles.modalItem} onPress={() => { setter(opt); setModalVisible(null); }}>
-              <Text style={{ color: opt === selected ? ACCENT : SUBTEXT, fontWeight: opt === selected ? 'bold' : 'normal' }}>
+            <TouchableOpacity
+              key={i}
+              style={styles.modalItem}
+              onPress={() => {
+                setter(opt);
+                setModalVisible(null);
+              }}
+            >
+              <Text
+                style={{
+                  color: opt === selected ? ACCENT : SUBTEXT,
+                  fontWeight: opt === selected ? "bold" : "normal",
+                }}
+              >
                 {opt}
               </Text>
             </TouchableOpacity>
@@ -137,7 +155,11 @@ export default function ReturnCheckoutScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: BG }}>
-      <View style={[styles.header, { backgroundColor: CARD }]}>        
+      <StatusBar
+        barStyle={theme.mode === "dark" ? "light-content" : "dark-content"}
+        backgroundColor={BG}
+      />
+      <View style={[styles.header, { backgroundColor: CARD }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={28} color={TEXT} />
         </TouchableOpacity>
@@ -147,56 +169,136 @@ export default function ReturnCheckoutScreen() {
 
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={[styles.section, { color: TEXT }]}>Sản phẩm</Text>
-        <FlatList data={returnItems} keyExtractor={(_, i) => i.toString()} renderItem={renderProduct} scrollEnabled={false} />
+        <FlatList
+          data={returnItems}
+          keyExtractor={(_, i) => i.toString()}
+          renderItem={renderProduct}
+          scrollEnabled={false}
+        />
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: TEXT }]}>Lý do trả hàng</Text>
-          <TouchableOpacity style={[styles.dropdown, { backgroundColor: CARD, borderColor: SUBTEXT }]} onPress={() => setModalVisible('reason')}>
+          <TouchableOpacity
+            style={[styles.dropdown, { backgroundColor: CARD, borderColor: SUBTEXT }]}
+            onPress={() => setModalVisible("reason")}
+          >
             <Text style={{ color: TEXT }}>{selectedReason}</Text>
           </TouchableOpacity>
         </View>
-        {renderModal(returnReasons, selectedReason, setSelectedReason, 'Chọn lý do', 'reason')}
+        {renderModal(returnReasons, selectedReason, setSelectedReason, "Chọn lý do", "reason")}
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: TEXT }]}>Phương án giải quyết</Text>
-          <TouchableOpacity style={[styles.dropdown, { backgroundColor: CARD, borderColor: SUBTEXT }]} onPress={() => setModalVisible('option')}>
+          <TouchableOpacity
+            style={[styles.dropdown, { backgroundColor: CARD, borderColor: SUBTEXT }]}
+            onPress={() => setModalVisible("option")}
+          >
             <Text style={{ color: TEXT }}>{selectedOption}</Text>
           </TouchableOpacity>
         </View>
-        {renderModal(returnOptions, selectedOption, setSelectedOption, 'Chọn phương án', 'option')}
+        {renderModal(returnOptions, selectedOption, setSelectedOption, "Chọn phương án", "option")}
 
-        {selectedOption === 'Hoàn tiền' && (
+        {selectedOption === "Hoàn tiền" && (
           <>
             <Text style={[styles.section, { color: TEXT }]}>Phương thức hoàn tiền</Text>
-            {refundMethods.map((m, i) => (<Text key={i} style={[styles.meta, { color: SUBTEXT }]}>• {m}</Text>))}
-            <TextInput value={bankName} onChangeText={setBankName} placeholder='Tên ngân hàng' placeholderTextColor={SUBTEXT} style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]} />
-            <TextInput value={bankAccountNumber} onChangeText={setBankAccountNumber} placeholder='Số tài khoản' placeholderTextColor={SUBTEXT} style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]} />
-            <TextInput value={bankAccountName} onChangeText={setBankAccountName} placeholder='Tên chủ tài khoản' placeholderTextColor={SUBTEXT} style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]} />
+            {refundMethods.map((m, i) => (
+              <Text key={i} style={[styles.meta, { color: SUBTEXT }]}>• {m}</Text>
+            ))}
+
+            <TextInput
+              value={bankName}
+              onChangeText={setBankName}
+              placeholder="Tên ngân hàng"
+              placeholderTextColor={SUBTEXT}
+              style={[styles.input, {
+                borderColor: SUBTEXT,
+                backgroundColor: CARD,
+                color: TEXT,
+                marginBottom: 12, // ✅ thêm dòng này
+              }]}
+            />
+
+            <TextInput
+              value={bankAccountNumber}
+              onChangeText={setBankAccountNumber}
+              placeholder="Số tài khoản"
+              placeholderTextColor={SUBTEXT}
+              style={[styles.input, {
+                borderColor: SUBTEXT,
+                backgroundColor: CARD,
+                color: TEXT,
+                marginBottom: 12, // ✅ thêm dòng này
+              }]}
+            />
+
+            <TextInput
+              value={bankAccountName}
+              onChangeText={setBankAccountName}
+              placeholder="Tên chủ tài khoản"
+              placeholderTextColor={SUBTEXT}
+              style={[styles.input, {
+                borderColor: SUBTEXT,
+                backgroundColor: CARD,
+                color: TEXT,
+                marginBottom: 12, // ✅ thêm dòng này
+              }]}
+            />
           </>
         )}
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: TEXT }]}>Email nhận thông báo</Text>
-          <TextInput value={email} onChangeText={setEmail} placeholder='Nhập email' placeholderTextColor={SUBTEXT} keyboardType='email-address' style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]} />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Nhập email"
+            placeholderTextColor={SUBTEXT}
+            keyboardType="email-address"
+            style={[styles.input, { borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]}
+          />
         </View>
 
         <View style={styles.field}>
           <Text style={[styles.label, { color: TEXT }]}>Mô tả chi tiết</Text>
-          <TextInput value={description} onChangeText={setDescription} placeholder='Nhập mô tả...' placeholderTextColor={SUBTEXT} multiline numberOfLines={4} style={[styles.input, { height: 100, textAlignVertical: 'top', borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]} />
+          <TextInput
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Nhập mô tả..."
+            placeholderTextColor={SUBTEXT}
+            multiline
+            numberOfLines={4}
+            style={[styles.input, { height: 100, textAlignVertical: "top", borderColor: SUBTEXT, backgroundColor: CARD, color: TEXT }]}
+          />
         </View>
 
-        <View style={[styles.field, { alignItems: 'flex-end' }]}
-        >
+        <View style={[styles.field, { alignItems: "flex-end" }]}>
           <Text style={[styles.label, { color: TEXT }]}>Hình ảnh minh họa</Text>
-          {images.length > 0 && <View style={styles.previewRow}>{images.map((uri, i) => <Image key={i} source={{ uri }} style={styles.preview} />)}</View>}
-          <TouchableOpacity onPress={pickImages} style={[styles.upload, { backgroundColor: CARD, borderColor: SUBTEXT }]}>            
-            <Ionicons name='cloud-upload-outline' size={18} color={ACCENT} />
+          {images.length > 0 && (
+            <View style={styles.previewRow}>
+              {images.map((uri, i) => (
+                <Image key={i} source={{ uri }} style={styles.preview} />
+              ))}
+            </View>
+          )}
+          <TouchableOpacity
+            onPress={pickImages}
+            style={[styles.upload, { backgroundColor: CARD, borderColor: SUBTEXT }]}
+          >
+            <Ionicons name="cloud-upload-outline" size={18} color={ACCENT} />
             <Text style={[styles.uploadText, { color: ACCENT }]}>Chọn ảnh</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={[styles.submit, { backgroundColor: ACCENT }]} onPress={handleSubmit} disabled={loading}>
-          {loading ? <ActivityIndicator color={BG} /> : <Text style={[styles.submitText, { color: BG }]}>Gửi yêu cầu</Text>}
+        <TouchableOpacity
+          style={[styles.submit, { backgroundColor: ACCENT }]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={BG} />
+          ) : (
+            <Text style={[styles.submitText, { color: BG }]}>Gửi yêu cầu</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

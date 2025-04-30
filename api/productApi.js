@@ -1,5 +1,5 @@
 // productApi.js
-import { get, post, remove } from '../utils/axios';
+import axiosInstance from '../api/axiosInstance';
 
 export const END_POINT = {
   GET_ALL_PRODUCT: "/products/view-all", 
@@ -10,7 +10,17 @@ export const END_POINT = {
   GET_ALL_PRODUCT_BY_CATEGORY: "/products/filter-by-category",
   GET_BEST_SELLER_PRODUCT: "/products/top-selling-products",
 };
+export const get = (url, params) => {
+  return axiosInstance.get(url, { params });
+};
 
+export const post = (url, data) => {
+  return axiosInstance.post(url, data);
+};
+
+export const remove = (url) => {
+  return axiosInstance.delete(url);
+};
 const productApi = {
   /**
    * Lấy danh sách sản phẩm (có phân trang)

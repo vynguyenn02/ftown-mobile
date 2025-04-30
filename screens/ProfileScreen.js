@@ -53,7 +53,9 @@ const ProfileScreen = ({ navigation }) => {
   const handleOrderStatus = (status) => navigation.navigate("OrderScreen", { status });
   const handleAddressBook = () => navigation.navigate("AddressScreen");
   const handlePersonalInfo = () => navigation.navigate("ProfileInfoScreen");
-
+  const handleFavoriteStyle = () => {
+    navigation.navigate("FavoriteStyleScreen"); 
+  };
   if (loading) {
     return (
       <SafeAreaView style={[styles.loadingContainer, { backgroundColor: BG }]}>
@@ -84,9 +86,11 @@ const ProfileScreen = ({ navigation }) => {
               <Text style={[styles.userName, { color: TEXT }]}>{fullName}</Text>
               <Text style={[styles.userPhone, { color: SUBTEXT }]}>{phoneNumber}</Text>
             </View>
-            <View style={[styles.coinContainer, { backgroundColor: ACCENT }]}>
-              <Text style={[styles.coinText, { color: BG }]}>{loyaltyPoints}</Text>
-            </View>
+              {loyaltyPoints > 0 && (
+                <View style={[styles.coinContainer, { backgroundColor: ACCENT }]}>
+                  <Text style={[styles.coinText, { color: BG }]}>{loyaltyPoints}</Text>
+                </View>
+              )}
           </View>
         </View>
 
@@ -132,6 +136,11 @@ const ProfileScreen = ({ navigation }) => {
           <TouchableOpacity style={styles.menuItem} onPress={handlePersonalInfo}>
             <Ionicons name="person-outline" size={24} color={ACCENT} style={styles.menuIcon} />
             <Text style={[styles.menuText, { color: TEXT }]}>Thông tin cá nhân</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleFavoriteStyle}>
+            <Ionicons name="color-palette-outline" size={24} color={ACCENT} style={styles.menuIcon} />
+            <Text style={[styles.menuText, { color: TEXT }]}>Phong cách yêu thích</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleToggleTheme}>

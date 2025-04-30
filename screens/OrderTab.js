@@ -93,7 +93,7 @@ export default function OrderTab({ status }) {
     switch (s?.toLowerCase()) {
       case "completed":
         return "Hoàn thành";
-      case "shipped":
+      case "delivered":
         return "Đã giao";
       case "pending confirmed":
         return "Chờ xác nhận";
@@ -114,7 +114,7 @@ export default function OrderTab({ status }) {
     switch (s?.toLowerCase()) {
       case "completed":
         return { backgroundColor: "#e0f8ec", color: "#1aa260" };
-      case "shipped":
+      case "delivered":
         return { backgroundColor: "#e3f2fd", color: "#2196f3" };
       case "pending confirmed":
         return { backgroundColor: "#fff9c4", color: "#f9a825" };

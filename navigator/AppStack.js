@@ -19,6 +19,7 @@ import NotificationScreen from "../screens/NotificationScreen";
 import ReturnableScreen from "../screens/ReturnableScreen";
 import ReturnRequestScreen from "../screens/ReturnRequestScreen";
 import ReturnCheckoutScreen from "../screens/ReturnCheckoutScreen";
+import FavoriteStyleScreen from "../screens/FavoriteStyleScreen";
 const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
@@ -69,6 +70,7 @@ const AppStack = () => {
       <Stack.Screen name="ReturnableScreen" component={ReturnableScreen} options={{ title: "Đơn có thể đổi trả" }} />
       <Stack.Screen name="ReturnRequestScreen" component={ReturnRequestScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ReturnCheckoutScreen" component={ReturnCheckoutScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="FavoriteStyleScreen" component={FavoriteStyleScreen} options={{ title: "Phong cách yêu thích" }} />
     </Stack.Navigator>
   );
 };
