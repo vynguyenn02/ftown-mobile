@@ -1,5 +1,4 @@
-// ✅ CheckoutScreen.js - xử lý tạo đơn hàng và redirect PAYOS nếu cần, giao diện được phục hồi về kiểu khối chia rõ như ban đầu
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   SafeAreaView,
   View,
@@ -14,8 +13,10 @@ import { Ionicons } from "@expo/vector-icons";
 import orderApi from "../api/orderApi";
 import * as WebBrowser from "expo-web-browser";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ThemeContext } from "../context/ThemeContext"; // ✅ import ThemeContext
 
 const CheckoutScreen = ({ route, navigation }) => {
+  const { theme } = useContext(ThemeContext); // ✅ lấy theme
   const { checkoutData, selectedAddress } = route.params || {};
   const [shippingAddress, setShippingAddress] = useState(() => selectedAddress || checkoutData?.shippingAddresses?.find(addr => addr.isDefault) || null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("COD");
@@ -39,8 +40,8 @@ const CheckoutScreen = ({ route, navigation }) => {
 
   if (!checkoutData) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Không có dữ liệu checkout.</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={[styles.errorText, { color: theme.text }]}>Không có dữ liệu checkout.</Text>
       </SafeAreaView>
     );
   }
@@ -66,9 +67,8 @@ const CheckoutScreen = ({ route, navigation }) => {
     }
 
     try {
-      console.log("🧑 accountId truyền lên:", accountId);
       const payload = {
-        accountId: accountId,
+        accountId,
         checkOutSessionId: checkoutData.checkOutSessionId,
         shippingAddressId: shippingAddress.addressId,
         paymentMethod: selectedPaymentMethod,
@@ -80,9 +80,15 @@ const CheckoutScreen = ({ route, navigation }) => {
 
         if (order.paymentMethod === "PAYOS" && order.paymentUrl) {
           await WebBrowser.openBrowserAsync(order.paymentUrl);
-        } else {
-          navigation.navigate("OrderScreen", { status: "Pending Confirmed" });
         }
+
+        navigation.reset({
+          index: 1,
+          routes: [
+            { name: "HomeScreen" },
+            { name: "OrderScreen", params: { status: "Pending Confirmed" } },
+          ],
+        });
       } else {
         Alert.alert("Lỗi", response.data.message);
       }
@@ -93,91 +99,95 @@ const CheckoutScreen = ({ route, navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="#000" />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Xác nhận đơn hàng</Text>
-        <Ionicons name="cart-outline" size={24} color="#000" />
+        <Text style={[styles.headerTitle, { color: theme.text }]}>Xác nhận đơn hàng</Text>
+        <Ionicons name="cart-outline" size={24} color={theme.text} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.blockSection}>
-          <Text style={styles.sectionTitle}>Danh sách sản phẩm</Text>
+        <View style={[styles.blockSection, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Danh sách sản phẩm</Text>
           {checkoutData.items.map((item) => (
-            <View key={item.productVariantId} style={styles.productItem}>
-              <Text style={styles.productName}>{item.productName}</Text>
+            <View key={item.productVariantId} style={[styles.productItem, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <Text style={[styles.productName, { color: theme.text }]}>{item.productName}</Text>
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 {item.imageUrl && (
                   <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="contain" />
                 )}
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.productDetail}>Size: {item.size}</Text>
+                  <Text style={[styles.productDetail, { color: theme.text }]}>Size: {item.size}</Text>
                   <View style={styles.colorRow}>
-                    <Text style={styles.productDetail}>Color: </Text>
+                    <Text style={[styles.productDetail, { color: theme.text }]}>Color: </Text>
                     <View style={[styles.colorCircle, { backgroundColor: item.color || '#ccc' }]} />
                   </View>
-                  <Text style={styles.productDetail}>Số lượng: {item.quantity}</Text>
-                  <Text style={styles.productDetail}>Giá mua: {item.priceAtPurchase.toLocaleString("vi-VN")} ₫</Text>
+                  <Text style={[styles.productDetail, { color: theme.text }]}>Số lượng: {item.quantity}</Text>
+                  <Text style={[styles.productDetail, { color: theme.text }]}>Giá mua: {item.priceAtPurchase.toLocaleString("vi-VN")} ₫</Text>
                 </View>
               </View>
             </View>
           ))}
         </View>
 
-        <View style={styles.blockSection}>
+        <View style={[styles.blockSection, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Địa chỉ giao hàng</Text>
             <TouchableOpacity onPress={handleSelectAddress}>
-              <Text style={styles.changeText}>Thay đổi</Text>
+              <Text style={[styles.changeText, { color: theme.primary }]}>Thay đổi</Text>
             </TouchableOpacity>
           </View>
           {shippingAddress ? (
-            <View style={styles.addressContainer}>
-              <Text style={styles.addressText}>{shippingAddress.address}, {shippingAddress.city}, {shippingAddress.district}, {shippingAddress.province}, {shippingAddress.country}</Text>
-              <Text style={styles.addressText}>Người nhận: {shippingAddress.recipientName} - {shippingAddress.recipientPhone}</Text>
-              <Text style={styles.addressText}>Email: {shippingAddress.email}</Text>
+            <View style={[styles.addressContainer, { backgroundColor: theme.background }]}>
+              <Text style={[styles.addressText, { color: theme.text }]}>{shippingAddress.address}, {shippingAddress.city}, {shippingAddress.district}, {shippingAddress.province}, {shippingAddress.country}</Text>
+              <Text style={[styles.addressText, { color: theme.text }]}>Người nhận: {shippingAddress.recipientName} - {shippingAddress.recipientPhone}</Text>
+              <Text style={[styles.addressText, { color: theme.text }]}>Email: {shippingAddress.email}</Text>
             </View>
           ) : (
-            <Text style={styles.value}>Không có địa chỉ được chọn.</Text>
+            <Text style={[styles.value, { color: theme.text }]}>Không có địa chỉ được chọn.</Text>
           )}
         </View>
 
-        <View style={styles.blockSection}>
-          <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
+        <View style={[styles.blockSection, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Phương thức thanh toán</Text>
           <View style={{ flexDirection: "row", marginBottom: 12 }}>
             {checkoutData.availablePaymentMethods.map((method) => (
               <TouchableOpacity
                 key={method}
-                style={[styles.methodButton, selectedPaymentMethod === method && styles.methodButtonActive]}
+                style={[
+                  styles.methodButton,
+                  { borderColor: theme.border },
+                  selectedPaymentMethod === method && { backgroundColor: theme.text, borderColor: theme.text },
+                ]}
                 onPress={() => setSelectedPaymentMethod(method)}
               >
-                <Text style={{ color: selectedPaymentMethod === method ? "#fff" : "#000" }}>{method}</Text>
+                <Text style={{ color: selectedPaymentMethod === method ? theme.background : theme.text }}>{method}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        <View style={styles.blockSection}>
-          <Text style={styles.sectionTitle}>Thông tin thanh toán</Text>
+        <View style={[styles.blockSection, { backgroundColor: theme.card }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Thông tin thanh toán</Text>
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Tổng tiền sản phẩm:</Text>
-            <Text style={styles.value}>{checkoutData.subTotal.toLocaleString("vi-VN")} ₫</Text>
+            <Text style={[styles.label, { color: theme.text }]}>Tổng tiền sản phẩm:</Text>
+            <Text style={[styles.value, { color: theme.text }]}>{checkoutData.subTotal.toLocaleString("vi-VN")} ₫</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Phí vận chuyển:</Text>
-            <Text style={styles.value}>{checkoutData.shippingCost.toLocaleString("vi-VN")} ₫</Text>
+            <Text style={[styles.label, { color: theme.text }]}>Phí vận chuyển:</Text>
+            <Text style={[styles.value, { color: theme.text }]}>{checkoutData.shippingCost.toLocaleString("vi-VN")} ₫</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Tổng cộng:</Text>
-            <Text style={styles.total}>{(checkoutData.subTotal + checkoutData.shippingCost).toLocaleString("vi-VN")} ₫</Text>
+            <Text style={[styles.label, { color: theme.text }]}>Tổng cộng:</Text>
+            <Text style={[styles.total, { color: theme.text }]}>{(checkoutData.subTotal + checkoutData.shippingCost).toLocaleString("vi-VN")} ₫</Text>
           </View>
         </View>
       </ScrollView>
 
-      <TouchableOpacity style={styles.payButton} onPress={handlePay}>
-        <Text style={styles.payButtonText}>Thanh Toán</Text>
+      <TouchableOpacity style={[styles.payButton, { backgroundColor: theme.text }]} onPress={handlePay}>
+        <Text style={[styles.payButtonText, { color: theme.background }]}>Thanh Toán</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

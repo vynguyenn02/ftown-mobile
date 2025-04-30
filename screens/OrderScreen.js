@@ -27,7 +27,7 @@ const OrderScreen = () => {
     { key: "pendingconfirmed", title: "Chờ xác nhận" },
     { key: "pendingpayment", title: "Chờ thanh toán" },
     { key: "confirmed", title: "Đã xác nhận" },
-    { key: "shipped", title: "Đã giao" },
+    { key: "delivered", title: "Đã giao" },
     { key: "completed", title: "Hoàn thành" },
     { key: "returnrequested", title: "Đổi/Trả" }, 
     { key: "canceled", title: "Đã huỷ" },
@@ -40,7 +40,7 @@ const OrderScreen = () => {
         "Pending Confirmed": "pendingconfirmed",
         PendingPayment: "pendingpayment",
         Confirmed: "confirmed",
-        Shipped: "shipped",
+        Delivered: "delivered",
         Canceled: "canceled",
         "Return Requested":    "returnrequested",
         Completed: "completed",
@@ -56,7 +56,7 @@ const OrderScreen = () => {
       pendingconfirmed: "Pending Confirmed",
       pendingpayment: "PendingPayment",
       confirmed: "Confirmed",
-      shipped: "Shipped",
+      delivered: "Delivered",
       completed: "Completed",
       returnrequested: "Return Requested",
       canceled: "Canceled",
@@ -79,9 +79,18 @@ const OrderScreen = () => {
           },
         ]}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate("HomeScreen"); // hoặc tab mặc định, ví dụ Home
+            }
+          }}
+        >
           <Ionicons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
+
         <Text style={[styles.headerTitle, { color: theme.text }]}>
           Đơn đã mua
         </Text>
