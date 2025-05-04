@@ -45,3 +45,22 @@ export const register = async ({ username, email, password }) => {
   }
 };
 
+export const googleLogin = async (idToken) => {
+  try {
+    const response = await api.post("/auth/google-login", { idToken });
+    const payload = response.data?.data ?? response.data;
+    
+    console.log("✅ GOOGLE LOGIN RESPONSE:", JSON.stringify(payload, null, 2));
+    
+    const token = payload.token;
+    const account = payload.account;
+    if (!token || !account?.accountId) {
+      throw new Error("Thiếu token hoặc accountId từ server (Google login)");
+    }
+    
+    return { token, account };
+  } catch (err) {
+    console.error("❌ GOOGLE LOGIN ERROR:", err.response?.data || err.message);
+    throw err;
+  }
+};
